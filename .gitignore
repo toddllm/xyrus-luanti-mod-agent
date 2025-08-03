@@ -1,0 +1,61 @@
+# Luanti/Minetest specific
+*.sqlite
+*.sqlite-journal
+*.log
+debug.txt
+env_meta.txt
+
+# World directories (these contain dynamic data)
+*-world/
+*/worlds/
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Build directories
+build/
+dist/
+bin/
+
+# Voyager specific
+luanti-voyager/luanti-source-voyager-fork/
+luanti-voyager/*.log
+
+# Test worlds (keep the structure but not the data)
+*-test-world/map.sqlite
+*-test-world/players.sqlite
+*-test-world/auth.sqlite
+*-test-world/env_meta.txt
+
+# Keep configuration files
+!*.conf
+!world.mt
+
+# Existing git repositories (to be added as submodules later)
+/better-than-luanti/
+/devkorth_mod/
+/luanti-voyager/
+/luanti_source/
+/petz-fork/
+/simple_skins/
+/unified_inventory/
+/nullifier_adventure/
+/inbox/
