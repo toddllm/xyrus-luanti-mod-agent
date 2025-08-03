@@ -13,3 +13,9 @@
 [submodule "mods/unified_inventory"]
 	path = mods/unified_inventory
 	url = https://github.com/minetest-mods/unified_inventory.git
+[submodule "luanti-voyager"]
+	path = luanti-voyager
+	url = git@github.com:toddllm/luanti-voyager.git
+[submodule "better-than-luanti"]
+	path = better-than-luanti
+	url = https://github.com/toddllm/luanti.git

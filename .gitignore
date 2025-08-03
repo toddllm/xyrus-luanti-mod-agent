@@ -50,12 +50,10 @@ luanti-voyager/*.log
 !world.mt
 
 # Existing git repositories (to be added as submodules later)
-/better-than-luanti/
-/devkorth_mod/
-/luanti-voyager/
+/better-than-luanti-backup/
+/luanti-voyager-backup/
 /luanti_source/
-/petz-fork/
-/simple_skins/
-/unified_inventory/
-/nullifier_adventure/
 /inbox/
+
+# Backup directories
+*-backup/

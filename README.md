@@ -10,7 +10,7 @@ In ToddLLM's garage, equipped with powerful GPU servers, we're exploring the int
 - 🎮 **Voxel Gaming** - Creating immersive multiplayer experiences
 - 🤖 **AI Integration** - Experimenting with AI-driven gameplay and world generation
 - 👨‍👩‍👧‍👦 **Family Collaboration** - ToddLLM works alongside his son and daughter, teaching AI through game development
-- 🌐 **Web Technologies** - Breaking free from native-only gaming through luanti-voyager's revolutionary browser-based voxel engine that runs Luanti worlds directly in web browsers with full multiplayer support (see `../luanti-voyager/README.md` for the full technical marvel)
+- 🌐 **Web Technologies** - Breaking free from native-only gaming through luanti-voyager's revolutionary browser-based voxel engine that runs Luanti worlds directly in web browsers with full multiplayer support (see `luanti-voyager/README.md` for the full technical marvel)
 - 🔬 **Creative Experimentation** - Testing wild ideas that might just revolutionize how we play
 
 ## Repository Structure
@@ -26,6 +26,8 @@ toddllm-luanti/
 │   ├── nullifier_adventure/      # Adventure gameplay mod - expanding game mechanics
 │   ├── simple_skins/             # Player skins mod (upstream reference)
 │   └── unified_inventory/        # Enhanced inventory (upstream reference)
+├── luanti-voyager/               # Web-based Luanti client (submodule)
+├── better-than-luanti/           # Our fork of Luanti engine with experimental improvements (submodule)
 ├── server-configs/               # Server configuration files
 │   └── server-30000.conf         # Main production server config
 ├── docs/                         # Documentation and guides
@@ -33,10 +35,9 @@ toddllm-luanti/
 │   └── SUBMODULES_SETUP.md           # Git submodule management guide
 ├── worlds/                       # Test worlds and experimental configurations
 ├── tools/                        # Utility scripts and automation tools
-├── better-than-luanti/           # Experimental engine improvements
-├── luanti-voyager/               # Web-based Luanti client (parallel project)
 ├── devkorth_test_world/          # Test world for devkorth experiments
-└── visual-demo/                  # Visual demonstrations and examples
+├── visual-demo/                  # Visual demonstrations and examples
+└── [Various scripts and configs] # Development tools and server management scripts
 ```
 
 ## Active Projects
