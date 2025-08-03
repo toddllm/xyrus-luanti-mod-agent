@@ -9,32 +9,48 @@ This mono repository serves as the central hub for our Luanti experimentation an
 In ToddLLM's garage, equipped with powerful GPU servers, we're exploring the intersection of:
 - 🎮 **Voxel Gaming** - Creating immersive multiplayer experiences
 - 🤖 **AI Integration** - Experimenting with AI-driven gameplay and world generation
-- 👨‍👩‍👧‍👦 **Family Collaboration** - ToddLLM works alongside his son and daughter, teaching programming through game development
-- 🌐 **Web Technologies** - Pushing Luanti beyond traditional boundaries with browser-based clients
+- 👨‍👩‍👧‍👦 **Family Collaboration** - ToddLLM works alongside his son and daughter, teaching AI through game development
+- 🌐 **Web Technologies** - Breaking free from native-only gaming through luanti-voyager's revolutionary browser-based voxel engine that runs Luanti worlds directly in web browsers with full multiplayer support (see `../luanti-voyager/README.md` for the full technical marvel)
 - 🔬 **Creative Experimentation** - Testing wild ideas that might just revolutionize how we play
 
 ## Repository Structure
 
 ```
 toddllm-luanti/
-├── mods/                    # Individual mod repositories (as submodules)
-│   ├── petz-fork/          # Fork of petz modpack - cute animals for family-friendly gameplay
-│   ├── devkorth_mod/       # The Legend of Devkorth - our omnipotent entity experiment
-│   ├── nullifier_adventure/ # Adventure gameplay mod - expanding game mechanics
-│   ├── simple_skins/       # Player skins mod (upstream reference)
-│   └── unified_inventory/  # Enhanced inventory (upstream reference)
-├── server-configs/         # Server configuration files
-├── docs/                   # Documentation and guides
-│   ├── luanti_server_mods_report.md
-│   └── SUBMODULES_SETUP.md
-├── worlds/                 # Test worlds and experimental configurations
-└── tools/                  # Utility scripts and automation tools
+├── mods/                          # Individual mod repositories (as submodules)
+│   ├── petz-fork/                # Fork of petz modpack - cute animals for family-friendly gameplay
+│   │   ├── petz/                 # Main pet system with 50+ animals
+│   │   ├── kitz/                 # Advanced mob AI framework
+│   │   └── bale/                 # Farming extensions
+│   ├── devkorth_mod/             # The Legend of Devkorth - our omnipotent entity experiment
+│   ├── nullifier_adventure/      # Adventure gameplay mod - expanding game mechanics
+│   ├── simple_skins/             # Player skins mod (upstream reference)
+│   └── unified_inventory/        # Enhanced inventory (upstream reference)
+├── server-configs/               # Server configuration files
+│   └── server-30000.conf         # Main production server config
+├── docs/                         # Documentation and guides
+│   ├── luanti_server_mods_report.md  # Comprehensive mod analysis
+│   └── SUBMODULES_SETUP.md           # Git submodule management guide
+├── worlds/                       # Test worlds and experimental configurations
+├── tools/                        # Utility scripts and automation tools
+├── better-than-luanti/           # Experimental engine improvements
+├── luanti-voyager/               # Web-based Luanti client (parallel project)
+├── devkorth_test_world/          # Test world for devkorth experiments
+└── visual-demo/                  # Visual demonstrations and examples
 ```
 
 ## Active Projects
 
 ### 🚀 Core Initiative: Luanti-Voyager Support
-The primary goal is supporting the **luanti-voyager** project, which brings Luanti to web browsers. Our mods and configurations are tested and optimized for web-based gameplay.
+
+The **luanti-voyager** project is revolutionizing how we experience voxel games by bringing the full Luanti engine to web browsers. This isn't just a viewer or limited client - it's a complete implementation that:
+- Renders complex voxel worlds at 60+ FPS in browser
+- Supports full multiplayer with WebRTC/WebSocket connections
+- Implements Luanti's complete Lua modding API in JavaScript
+- Enables instant play without downloads or installations
+- Opens voxel gaming to billions of devices worldwide
+
+Our mods are specifically optimized and tested for browser performance, pushing the boundaries of what's possible in web-based 3D gaming.
 
 ### 🎯 Custom Mods We Maintain
 
@@ -88,14 +104,18 @@ Running on ToddLLM's garage GPU servers, we host various experimental instances 
 ## Development Philosophy
 
 ### 🤝 Family-Friendly Innovation
-Every mod and feature is designed with family collaboration in mind. Complex enough to teach real programming concepts, simple enough for kids to understand and enjoy.
+Every mod and feature is designed with family collaboration in mind. Complex enough to teach real AI concepts, simple enough for kids to understand and enjoy.
 
 ### 🧪 AI-Assisted Development
-We actively use AI tools (like Claude, GPT-4, and others) to:
-- Generate creative mod ideas
-- Debug complex Lua code
-- Create engaging narratives and lore
-- Optimize performance for web deployment
+We embrace the full spectrum of AI capabilities across all modalities:
+- **Language Models** - Latest proprietary models from Anthropic and OpenAI, plus every open-source model we can get our hands on
+- **Vision Systems** - Text-to-image, image analysis, texture generation
+- **Audio Processing** - Text-to-speech for NPCs, sound effect generation, voice commands
+- **Video Generation** - Cutscenes, trailers, gameplay recordings
+- **Multimodal Agents** - Autonomous systems that combine all capabilities
+- **Custom Tools** - Task-specific agents for code generation, world building, story writing, bug hunting, performance optimization, and literally anything else we can imagine
+
+We don't limit ourselves - if an AI can do it, we're finding a way to integrate it into our gaming experience.
 
 ### 🌟 Open Experimentation
 Nothing is off-limits! From reality-bending entities to talking pets, if we can imagine it, we try to build it.
@@ -140,17 +160,27 @@ We welcome contributions from:
 - **Lua** - Primary modding language
 - **Git Submodules** - Managing multiple mod repositories
 - **GPU Servers** - Local high-performance testing environment
-- **AI Tools** - Claude, GPT-4, and other assistants for development
+- **AI Everything** - Every model, every modality, every tool - proprietary, open-source, custom-built, experimental
 - **Web Technologies** - Supporting luanti-voyager's browser-based approach
 
 ## Future Experiments
 
 Some wild ideas we're exploring:
-- 🤖 AI-controlled NPCs that learn from player behavior
-- 🌍 Procedurally generated storylines
-- 🎭 Voice-controlled gameplay (using local AI)
-- 🏗️ Collaborative building with AI assistants
-- 🎮 Cross-reality gameplay (VR/AR experiments)
+- 🤖 **Humanoid Robot Players** - Physical robots playing Luanti in the real world
+- 🌱 **AI Lawn Mower Integration** - Your lawn mower builds voxel representations of your yard
+- 🦄 **Unicorn NPCs** - Mythical creatures with emergent AI personalities
+- 🧠 **Neural Interface Gaming** - Direct thought-to-block building (BCI integration)
+- 🎪 **Circus Physics Engine** - Juggling, tightrope walking, and acrobatic mobs
+- 🐉 **Dragon Breeding Simulator** - Genetic algorithms for dragon evolution
+- 🎨 **AI Art Gallery** - NPCs that create and critique voxel art in real-time
+- 🚁 **Drone Swarm Building** - Real drones that replicate in-game structures
+- 🎭 **Shakespearean NPCs** - Villagers that speak only in iambic pentameter
+- 🌌 **Quantum Superposition Blocks** - Blocks that exist in multiple states until observed
+- 🎸 **Rock Band Mobs** - Enemies that attack through musical performances
+- 🏃 **Parkour AI Coach** - An AI that designs and teaches optimal movement routes
+- 🍕 **Pizza Delivery Quests** - Time-critical missions with real pizza ordering integration
+- 🗣️ **Therapy Bot Villagers** - NPCs trained on psychology to help players
+- 🎲 **Chaos Mode** - AI Dungeon Master that constantly changes game rules
 
 ## Family Code of Conduct
 
@@ -175,6 +205,6 @@ Some wild ideas we're exploring:
 
 ---
 
-*"In the garage where GPUs hum and children's laughter echoes, we're not just playing games - we're building worlds, teaching code, and proving that the best innovations come from family collaboration and a healthy dose of AI assistance."* - ToddLLM
+*"We're not building a game server, we're building a playground where kids teach AIs to dream in blocks while robots mow lawns in voxel patterns and unicorns debate philosophy with quantum physicists. Also, there's pizza."* - ToddLLM
 
 🚀 Happy Mining and Crafting! 🎮
