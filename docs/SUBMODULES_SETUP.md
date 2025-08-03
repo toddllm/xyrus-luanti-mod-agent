@@ -6,8 +6,12 @@ This document explains how to set up the git submodules for the toddllm-luanti m
 
 ### ✅ Completed
 1. **petz-fork** - Added as submodule from `git@github.com:toddllm/petz.git`
+2. **devkorth_mod** - Added as submodule from `git@github.com:toddllm/devkorth_mod.git`
+3. **nullifier_adventure** - Added as submodule from `git@github.com:toddllm/nullifier_adventure.git`
+4. **simple_skins** - Added as reference submodule from `https://codeberg.org/TenPlus1/simple_skins.git`
+5. **unified_inventory** - Added as reference submodule from `https://github.com/minetest-mods/unified_inventory.git`
 
-### ⚠️ Pending GitHub Repository Creation
+### ✅ All Submodules Successfully Added!
 
 The following repositories need to be created on GitHub before they can be added as submodules:
 

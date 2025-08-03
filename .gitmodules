@@ -1,3 +1,15 @@
 [submodule "mods/petz-fork"]
 	path = mods/petz-fork
 	url = git@github.com:toddllm/petz.git
+[submodule "mods/devkorth_mod"]
+	path = mods/devkorth_mod
+	url = git@github.com:toddllm/devkorth_mod.git
+[submodule "mods/nullifier_adventure"]
+	path = mods/nullifier_adventure
+	url = git@github.com:toddllm/nullifier_adventure.git
+[submodule "mods/simple_skins"]
+	path = mods/simple_skins
+	url = https://codeberg.org/TenPlus1/simple_skins.git
+[submodule "mods/unified_inventory"]
+	path = mods/unified_inventory
+	url = https://github.com/minetest-mods/unified_inventory.git
