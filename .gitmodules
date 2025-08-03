@@ -1,0 +1,3 @@
+[submodule "mods/petz-fork"]
+	path = mods/petz-fork
+	url = git@github.com:toddllm/petz.git

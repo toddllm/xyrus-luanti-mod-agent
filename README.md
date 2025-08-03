@@ -7,17 +7,21 @@ This is a mono repository for managing Luanti (formerly Minetest) mods, server c
 ```
 toddllm-luanti/
 ├── mods/                    # Individual mod repositories (as submodules)
-│   ├── petz-fork/          # Fork of petz modpack
-│   ├── devkorth_mod/       # The Legend of Devkorth mod
-│   ├── nullifier_adventure/ # Adventure gameplay mod
-│   ├── simple_skins/       # Player skins mod (upstream)
-│   └── unified_inventory/  # Enhanced inventory (upstream)
+│   └── petz-fork/          # Fork of petz modpack ✅
 ├── server-configs/         # Server configuration files
 ├── docs/                   # Documentation
-│   └── luanti_server_mods_report.md
+│   ├── luanti_server_mods_report.md
+│   └── SUBMODULES_SETUP.md
 ├── worlds/                 # Test worlds and configurations
 └── tools/                  # Utility scripts and tools
 ```
+
+### Pending Submodules
+The following will be added once their GitHub repositories are created:
+- `mods/devkorth_mod/` - The Legend of Devkorth mod
+- `mods/nullifier_adventure/` - Adventure gameplay mod
+- `mods/simple_skins/` - Player skins mod (upstream reference)
+- `mods/unified_inventory/` - Enhanced inventory (upstream reference)
 
 ## Active Projects
 
