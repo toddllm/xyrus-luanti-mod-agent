@@ -1,0 +1,158 @@
+import json
+import re
+import os
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
+
+from lan_modder.ollama_client import complete
+from lan_modder.deployer import write_mod, load_mod
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
+
+app = FastAPI(title="LAN Modder")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
+class GenerateRequest(BaseModel):
+    description: str = Field(..., description="User description of the mod to build")
+    mod_name: Optional[str] = Field(None, description="Optional explicit mod name")
+    model: str = Field("auto", description="one of: auto, fast, strong")
+
+
+class FeedbackRequest(BaseModel):
+    mod_name: str
+    feedback: str
+    model: str = Field("auto", description="one of: auto, fast, strong")
+
+
+# naive in-memory log of recent actions
+recent_events: list[dict[str, Any]] = []
+
+
+def select_model(description: str, explicit: str) -> bool:
+    if explicit == "fast":
+        return False
+    if explicit == "strong":
+        return True
+    # Heuristics: prefer strong for complex features
+    hard_keywords = [
+        "pathfind", "pathfinding", "formspec", "hud", "worldgen", "mapgen",
+        "schematic", "biome", "l-system", "entity ai", "cluster", "persistent",
+        "serialization", "performance", "optimize", "compatibility", "api",
+        "particles", "shader", "voxels", "inventory ui", "automation", "network",
+        "asynchronous", "thread", "benchmark", "profiling", "state machine",
+        "fsm", "algorithm", "graph", "dijkstra", "a*", "astar", "abm", "lbm",
+        "forms", "deterministic", "rollback", "multiplayer", "security",
+    ]
+    long_desc = len(description.split()) > 120
+    mentions = sum(1 for k in hard_keywords if k in description.lower())
+    return long_desc or mentions >= 2
+
+
+SYSTEM_PROMPT = (
+    "You are a Luanti/Minetest mod engineer. Generate a complete, minimal, working mod per the user's description. "
+    "Output ONLY one JSON object inside a single fenced code block with language json. "
+    "Schema: {\n  'mod_name': str (lowercase, underscores),\n  'summary': str,\n  'files': { 'init.lua': '...lua code...', 'mod.conf': 'name = ...\noptional_depends = default' , ... }\n}. "
+    "Rules: files must be small and runnable; keep code concise; include a correct mod.conf; avoid huge assets; prefer text and minimal textures as placeholders. "
+    "If the request implies multiple steps, start with a minimal MVP."
+)
+
+FEEDBACK_SYSTEM = (
+    "You are revising an existing Luanti mod. Based on feedback, return FULL updated files. "
+    "Output the same JSON schema as before (mod_name, summary, files). Keep diffs small and focused."
+)
+
+
+def extract_json_block(text: str) -> Dict[str, Any]:
+    # Find the first ```json ... ``` block, else any ``` ... ```
+    m = re.search(r"```json\s*(\{[\s\S]*?\})\s*```", text)
+    if not m:
+        m = re.search(r"```\s*(\{[\s\S]*?\})\s*```", text)
+    raw = m.group(1) if m else text
+    try:
+        return json.loads(raw)
+    except Exception as e:
+        # Try to fix trailing commas and use relaxed parsing
+        raw2 = re.sub(r",\s*([}\]])", r"\1", raw)
+        return json.loads(raw2)
+
+
+@app.get("/")
+async def index() -> FileResponse:
+    return FileResponse(str(STATIC_DIR / "index.html"))
+
+
+@app.get("/api/events")
+async def events() -> JSONResponse:
+    return JSONResponse(recent_events[-50:])
+
+
+@app.post("/api/generate_mod")
+async def generate_mod(req: GenerateRequest):
+    use_strong = select_model(req.description, req.model)
+    prompt = (
+        f"User request: {req.description}\n\n"
+        f"If a specific mod name is given, use it: {req.mod_name or 'none provided'}.\n"
+        "Return JSON per schema."
+    )
+    try:
+        output = await complete(prompt, use_strong=use_strong, system=SYSTEM_PROMPT)
+        data = extract_json_block(output)
+        mod_name = req.mod_name or data.get("mod_name")
+        if not mod_name:
+            raise ValueError("Model did not provide mod_name")
+        files = data.get("files")
+        if not isinstance(files, dict) or not files:
+            raise ValueError("Model did not provide files map")
+        # Ensure mandatory files
+        if "mod.conf" not in files:
+            files["mod.conf"] = f"name = {mod_name}\noptional_depends = default\n"
+        if "init.lua" not in files:
+            files["init.lua"] = "minetest.log('action', '[%s] loaded')\n" % mod_name
+        write_mod(mod_name, files)
+        load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        event = {"action": "generate_mod", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+        recent_events.append(event)
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", "")}
+    except Exception as e:
+        err = str(e)
+        recent_events.append({"action": "error", "message": err})
+        raise HTTPException(status_code=500, detail=err)
+
+
+@app.post("/api/feedback")
+async def feedback(req: FeedbackRequest):
+    use_strong = select_model(req.feedback, req.model)
+    context = (
+        f"We need to revise mod '{req.mod_name}'. Feedback: {req.feedback}. "
+        f"Return full updated files."
+    )
+    try:
+        output = await complete(context, use_strong=use_strong, system=FEEDBACK_SYSTEM)
+        data = extract_json_block(output)
+        mod_name = data.get("mod_name") or req.mod_name
+        files = data.get("files")
+        if not isinstance(files, dict) or not files:
+            raise ValueError("Model did not provide files map")
+        write_mod(mod_name, files)
+        load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        event = {"action": "feedback", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+        recent_events.append(event)
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+    except Exception as e:
+        err = str(e)
+        recent_events.append({"action": "error", "message": err})
+        raise HTTPException(status_code=500, detail=err)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", "8088"))
+    uvicorn.run("lan_modder.app:app", host=host, port=port, reload=False)

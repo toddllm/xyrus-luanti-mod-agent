@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LAN Modder</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; background: #0b1022; color: #e8eefc; }
+    .card { background: #12183a; border: 1px solid #2a3163; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    label { display: block; margin: 8px 0 4px; font-weight: 600; }
+    textarea, input, select { width: 100%; box-sizing: border-box; background: #0e1430; color: #e8eefc; border: 1px solid #2a3163; border-radius: 8px; padding: 10px; }
+    button { background: #3a6ff7; color: white; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .events { font-family: ui-monospace, monospace; white-space: pre-wrap; font-size: 12px; background: #0e1430; padding: 10px; border-radius: 8px; border: 1px solid #2a3163; }
+  </style>
+</head>
+<body>
+  <h1>LAN Modder</h1>
+
+  <div class="card">
+    <h2>Generate a Mod</h2>
+    <label for="desc">Describe the mod</label>
+    <textarea id="desc" rows="6" placeholder="e.g., add a simple teleport wand command /twand that teleports you 10 nodes forward"></textarea>
+    <div class="row">
+      <div>
+        <label for="modname">Mod name (optional)</label>
+        <input id="modname" placeholder="lowercase_with_underscores" />
+      </div>
+      <div>
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="auto" selected>Auto (20B for easy, 120B for hard)</option>
+          <option value="fast">Fast (20B)</option>
+          <option value="strong">Strong (120B)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top: 10px">
+      <button id="gen">Generate and Deploy</button>
+      <span id="genStatus"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Give Feedback</h2>
+    <div class="row">
+      <div>
+        <label for="fb_mod">Mod name</label>
+        <input id="fb_mod" placeholder="existing mod name" />
+      </div>
+      <div>
+        <label for="fb_model">Model</label>
+        <select id="fb_model">
+          <option value="auto" selected>Auto</option>
+          <option value="fast">Fast (20B)</option>
+          <option value="strong">Strong (120B)</option>
+        </select>
+      </div>
+    </div>
+    <label for="feedback">Feedback</label>
+    <textarea id="feedback" rows="5" placeholder="what to improve or fix"></textarea>
+    <div style="margin-top: 10px">
+      <button id="sendFeedback">Update and Redeploy</button>
+      <span id="fbStatus"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Recent Events</h3>
+    <div id="events" class="events">Loading...</div>
+  </div>
+
+  <script>
+    async function refreshEvents() {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        const txt = data.map(e => `[${new Date().toLocaleTimeString()}] ${e.action}: ${e.mod_name || ''} ${e.model || ''} ${e.message || ''}`).join('\n');
+        document.getElementById('events').textContent = txt || 'No events yet';
+      } catch (e) {
+        document.getElementById('events').textContent = 'Error loading events';
+      }
+    }
+    setInterval(refreshEvents, 3000);
+    refreshEvents();
+
+    document.getElementById('gen').addEventListener('click', async () => {
+      const btn = document.getElementById('gen');
+      const status = document.getElementById('genStatus');
+      btn.disabled = true; status.textContent = 'Generating...';
+      try {
+        const body = {
+          description: document.getElementById('desc').value,
+          mod_name: document.getElementById('modname').value || null,
+          model: document.getElementById('model').value,
+        };
+        const res = await fetch('/api/generate_mod', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        status.textContent = `Deployed ${data.mod_name} using ${data.model}`;
+        document.getElementById('fb_mod').value = data.mod_name;
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('sendFeedback').addEventListener('click', async () => {
+      const btn = document.getElementById('sendFeedback');
+      const status = document.getElementById('fbStatus');
+      btn.disabled = true; status.textContent = 'Updating...';
+      try {
+        const body = {
+          mod_name: document.getElementById('fb_mod').value,
+          feedback: document.getElementById('feedback').value,
+          model: document.getElementById('fb_model').value,
+        };
+        const res = await fetch('/api/feedback', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        status.textContent = `Redeployed ${data.mod_name} using ${data.model}`;
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
