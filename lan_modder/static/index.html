@@ -115,7 +115,20 @@
       <button id="refreshHistory">Refresh</button>
       <span id="historyStatus"></span>
     </div>
-    <div id="historyList" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+    <div class="row">
+      <div>
+        <label for="historySelect">Select an attempt</label>
+        <select id="historySelect" style="width:100%"></select>
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="loadGen">Load into Generate</button>
+          <button id="loadFb">Load into Feedback</button>
+        </div>
+      </div>
+      <div>
+        <label>Recent attempts (tail)</label>
+        <div id="historyList" class="events" style="max-height: 220px; overflow:auto">Loading...</div>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -197,6 +210,17 @@
         const items = data.items || [];
         const lines = items.map(i => `${i.timestamp}  [${i.type}]  ${i.mod_name || ''}  ${i.model || ''}  ${i.summary || ''}  id=${i.id}`);
         document.getElementById('historyList').textContent = lines.join('\n') || 'No history yet';
+        // populate selector
+        const sel = document.getElementById('historySelect');
+        const current = sel.value;
+        sel.innerHTML = '';
+        items.forEach(i => {
+          const opt = document.createElement('option');
+          opt.value = i.id;
+          opt.textContent = `${i.timestamp} [${i.type}] ${i.mod_name || ''} ${i.model || ''}`;
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
         status.textContent = '';
       } catch (e) {
         status.textContent = 'Error loading history';
@@ -204,6 +228,37 @@
     }
     document.getElementById('refreshHistory').addEventListener('click', refreshHistory);
     refreshHistory();
+
+    async function loadHistoryDetail(id) {
+      const res = await fetch(`/api/history/${id}`);
+      if (!res.ok) throw new Error('Failed to load history');
+      return await res.json();
+    }
+
+    document.getElementById('loadGen').addEventListener('click', async () => {
+      const id = document.getElementById('historySelect').value;
+      if (!id) return;
+      try {
+        const item = await loadHistoryDetail(id);
+        if (item.prompt) document.getElementById('desc').value = item.prompt;
+        if (item.mod_name) document.getElementById('modname').value = item.mod_name;
+        if (item.model) document.getElementById('model').value = (item.model === 'strong' ? 'strong' : (item.model === 'fast' ? 'fast' : 'auto'));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {}
+    });
+
+    document.getElementById('loadFb').addEventListener('click', async () => {
+      const id = document.getElementById('historySelect').value;
+      if (!id) return;
+      try {
+        const item = await loadHistoryDetail(id);
+        if (item.mod_name) document.getElementById('fb_mod').value = item.mod_name;
+        if (item.feedback) document.getElementById('feedback').value = item.feedback;
+        if (item.model) document.getElementById('fb_model').value = (item.model === 'strong' ? 'strong' : (item.model === 'fast' ? 'fast' : 'auto'));
+        // scroll to Feedback card
+        document.getElementById('feedback').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {}
+    });
 
     document.getElementById('gen').addEventListener('click', async () => {
       const btn = document.getElementById('gen');
