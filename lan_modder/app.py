@@ -118,6 +118,9 @@ SYSTEM_PROMPT = (
     "- Register node: minetest.register_node('<mod>:spawn_node',{on_construct=function(pos) minetest.add_entity({x=pos.x,y=pos.y+1,z=pos.z},'<mod>:entity'); minetest.set_node(pos,{name='air'}) end})\n"
     "- Register chat: minetest.register_chatcommand('spawn_<n>',{func=function(name) local p=minetest.get_player_by_name(name); local pos=vector.round(p:get_pos()); minetest.add_entity({x=pos.x,y=pos.y+1,z=pos.z},'<mod>:entity'); return true,'ok' end})\n"
     "- Minimal sprite entity: minetest.register_entity('<mod>:entity',{initial_properties={visual='sprite',textures={'default_stone.png'},visual_size={x=4,y=4},nametag='<Name>'}})\n"
+    "- Simple formspec: minetest.show_formspec(name,'<mod>:ui','formspec_version[4]size[8,6]label[0.5,0.7;Hello]button_exit[3,5;2,0.8;ok;OK]')\n"
+    "- Craft item: minetest.register_craft({output='<mod>:item',recipe={{'default:stick',''}, {'',''}}})\n"
+    "- HUD: local id=minetest.get_player_by_name(name):hud_add({hud_elem_type='text',text='Hi',position={x=0.5,y=0.1}})\n"
 )
 
 FEEDBACK_SYSTEM = (
@@ -134,6 +137,12 @@ def build_guided_prompt(user_desc: str) -> str:
         guidance.append("Use a sprite fallback (default_stone.png) if no meshes are present.")
     if any(k in desc_l for k in ["command", "chat", "/"]):
         guidance.append("Expose a chat command for the primary action.")
+    if any(k in desc_l for k in ["formspec", "dialog", "ui", "menu"]):
+        guidance.append("Provide a minimal formspec that opens on right-click or via chat.")
+    if any(k in desc_l for k in ["craft", "recipe", "item"]):
+        guidance.append("Register at least one craft recipe and ensure the item/node is usable.")
+    if any(k in desc_l for k in ["hud", "message", "notify"]):
+        guidance.append("Demonstrate a HUD text or minetest.chat_send_player notification.")
     guidance.append("Add minetest.log('action', ...) in key events for visibility.")
     if guidance:
         return user_desc + "\n\nGuidance:\n- " + "\n- ".join(guidance)

@@ -22,6 +22,11 @@
     <h2>Generate a Mod</h2>
     <label for="desc">Describe the mod</label>
     <textarea id="desc" rows="6" placeholder="e.g., add a simple teleport wand command /twand that teleports you 10 nodes forward"></textarea>
+    <div style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="preset" data-prompt="NPC: A friendly guard. Right-click shows a hello dialog; also add /spawn_guard and guard:spawn_node.">Preset: NPC with UI & spawn</button>
+      <button class="preset" data-prompt="Utility: Add /home to teleport to spawn; show a HUD message when used.">Preset: Chat + HUD</button>
+      <button class="preset" data-prompt="Crafting: Add a shiny stone item with a simple recipe; right-click shows a small formspec.">Preset: Craft + UI</button>
+    </div>
     <div class="row">
       <div>
         <label for="modname">Mod name (optional)</label>
@@ -349,6 +354,16 @@
       } finally {
         btn.disabled = false; spin.style.display = 'none';
       }
+    });
+
+    // Preset prompt buttons
+    document.querySelectorAll('button.preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = document.getElementById('desc');
+        const p = btn.getAttribute('data-prompt');
+        t.value = (t.value ? (t.value + '\n\n') : '') + p;
+        t.focus();
+      });
     });
 
     document.getElementById('autoFix').addEventListener('click', async () => {
