@@ -12,6 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+import subprocess
 
 from lan_modder.ollama_client import complete
 from lan_modder.deployer import write_mod, load_mod, unload_mod
@@ -337,6 +338,69 @@ async def logs(offset: int = 0, limit: int = 5000) -> JSONResponse:
             "minetest_log": server_log,
             "enabled_mods": enabled_mods,
             "deployed_mods": deployed_mods,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def check_server_running() -> bool:
+    try:
+        result = subprocess.run(['systemctl', 'is-active', 'minetest-server'], capture_output=True, text=True, timeout=3)
+        return result.returncode == 0 and result.stdout.strip() == 'active'
+    except Exception:
+        return False
+
+
+def summarize_server_log(max_bytes: int = 10000) -> dict[str, Any]:
+    text = tail_text_file(MINETEST_LOG, max_bytes=max_bytes)
+    lines = text.splitlines() if text else []
+    err_samples: list[str] = []
+    warn_samples: list[str] = []
+    errors = 0
+    warnings = 0
+    for ln in lines[-500:]:
+        l = ln.lower()
+        if 'error' in l:
+            errors += 1
+            if len(err_samples) < 5:
+                err_samples.append(ln)
+        elif 'warn' in l:
+            warnings += 1
+            if len(warn_samples) < 5:
+                warn_samples.append(ln)
+    return {
+        'errors': errors,
+        'warnings': warnings,
+        'error_samples': err_samples,
+        'warning_samples': warn_samples,
+    }
+
+
+@app.get("/api/status")
+async def status() -> JSONResponse:
+    try:
+        server_running = check_server_running()
+        enabled = parse_enabled_mods(WORLD_MT)
+        deployed = []
+        if SERVER_MODS_DIR.exists():
+            deployed = sorted([p.name for p in SERVER_MODS_DIR.iterdir() if p.is_dir()])
+        last_event = recent_events[-1] if recent_events else None
+        # find last error
+        last_error = None
+        for ev in reversed(recent_events):
+            if ev.get('action') == 'error':
+                last_error = ev
+                break
+        log_summary = summarize_server_log()
+        return JSONResponse({
+            'server_running': server_running,
+            'enabled_mods_count': sum(1 for v in enabled.values() if v),
+            'enabled_mods': enabled,
+            'deployed_mods_count': len(deployed),
+            'deployed_mods': deployed,
+            'last_event': last_event,
+            'last_error': last_error,
+            'server_log': log_summary,
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

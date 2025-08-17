@@ -88,8 +88,17 @@
   </div>
 
   <div class="card">
-    <h3>Recent Events</h3>
-    <div id="events" class="events">Loading...</div>
+    <h3>Status & Recent Events</h3>
+    <div class="row">
+      <div>
+        <h4>Server Status</h4>
+        <div id="status" class="events">Loading...</div>
+      </div>
+      <div>
+        <h4>Recent Events</h4>
+        <div id="events" class="events">Loading...</div>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -161,6 +170,26 @@
         document.getElementById('events').textContent = 'Error loading events';
       }
     }
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const s = await res.json();
+        const lines = [];
+        lines.push(`Server: ${s.server_running ? 'ONLINE' : 'OFFLINE'}`);
+        lines.push(`Enabled mods: ${s.enabled_mods_count}`);
+        lines.push(`Deployed mods: ${s.deployed_mods_count}`);
+        if (s.last_event) lines.push(`Last event: ${s.last_event.action} ${s.last_event.mod_name || ''}`);
+        if (s.last_error) lines.push(`Last error: ${s.last_error.message}`);
+        if (s.server_log) {
+          lines.push(`Log summary: errors=${s.server_log.errors}, warnings=${s.server_log.warnings}`);
+          (s.server_log.error_samples || []).forEach(l => lines.push(`E: ${l}`));
+          (s.server_log.warning_samples || []).forEach(l => lines.push(`W: ${l}`));
+        }
+        document.getElementById('status').textContent = lines.join('\n');
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error loading status';
+      }
+    }
     async function refreshMods() {
       try {
         const res = await fetch('/api/mods');
@@ -180,8 +209,8 @@
     }
     setInterval(refreshMods, 15000);
     refreshMods();
-    setInterval(refreshEvents, 3000);
-    refreshEvents();
+    setInterval(() => { refreshEvents(); refreshStatus(); }, 5000);
+    refreshEvents(); refreshStatus();
 
     async function refreshLogs() {
       const limit = parseInt(document.getElementById('logLimit').value, 10);
