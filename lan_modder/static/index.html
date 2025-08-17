@@ -48,7 +48,7 @@
     <div class="row">
       <div>
         <label for="fb_mod">Mod name</label>
-        <input id="fb_mod" placeholder="existing mod name" />
+        <select id="fb_mod"></select>
       </div>
       <div>
         <label for="fb_model">Model</label>
@@ -120,6 +120,25 @@
         document.getElementById('events').textContent = 'Error loading events';
       }
     }
+    async function refreshMods() {
+      try {
+        const res = await fetch('/api/mods');
+        const data = await res.json();
+        const sel = document.getElementById('fb_mod');
+        const current = sel.value;
+        sel.innerHTML = '';
+        (data.mods || []).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.name; opt.textContent = `${m.name}${m.enabled ? ' (enabled)' : ''}${m.on_server ? '' : ' [not on server]'}`;
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+      } catch (e) {
+        // ignore
+      }
+    }
+    setInterval(refreshMods, 15000);
+    refreshMods();
     setInterval(refreshEvents, 3000);
     refreshEvents();
 

@@ -19,6 +19,7 @@ LOG_FILE = REPO_ROOT / "lan_modder" / "activity.log"
 MINETEST_LOG = Path("/var/log/minetest/minetest.log")
 WORLD_MT = Path("/var/games/minetest-server/.minetest/worlds/world/world.mt")
 SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
+REPO_MODS_DIR = REPO_ROOT / "mods"
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -147,6 +148,19 @@ def parse_enabled_mods(world_mt_path: Path) -> dict[str, bool]:
     return enabled
 
 
+def list_mods_in_directory(dir_path: Path) -> list[str]:
+    if not dir_path.exists():
+        return []
+    names: list[str] = []
+    try:
+        for p in dir_path.iterdir():
+            if p.is_dir() and not p.name.startswith('.'):
+                names.append(p.name)
+    except Exception:
+        pass
+    return sorted(names)
+
+
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(str(STATIC_DIR / "index.html"))
@@ -171,6 +185,36 @@ async def logs(offset: int = 0, limit: int = 5000) -> JSONResponse:
             "minetest_log": server_log,
             "enabled_mods": enabled_mods,
             "deployed_mods": deployed_mods,
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/mods")
+async def list_mods() -> JSONResponse:
+    try:
+        enabled = parse_enabled_mods(WORLD_MT)
+        server_mods = set(list_mods_in_directory(SERVER_MODS_DIR))
+        repo_mods = set(list_mods_in_directory(REPO_MODS_DIR))
+        all_mods = sorted(server_mods | repo_mods | set(enabled.keys()))
+        # Build rich entries
+        entries = []
+        for name in all_mods:
+            entries.append({
+                "name": name,
+                "enabled": bool(enabled.get(name, False)),
+                "on_server": name in server_mods,
+                "in_repo": name in repo_mods,
+            })
+        # Sort: enabled first, then on_server, then in_repo, then name
+        entries.sort(key=lambda m: (
+            0 if m["enabled"] else 1,
+            0 if m["on_server"] else 1,
+            0 if m["in_repo"] else 1,
+            m["name"],
+        ))
+        return JSONResponse({
+            "mods": entries,
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
