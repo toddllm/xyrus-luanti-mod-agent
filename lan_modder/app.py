@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from lan_modder.ollama_client import complete
-from lan_modder.deployer import write_mod, load_mod
+from lan_modder.deployer import write_mod, load_mod, unload_mod
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
@@ -25,6 +25,7 @@ SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
 REPO_MODS_DIR = REPO_ROOT / "mods"
 HISTORY_DIR = REPO_ROOT / "lan_modder" / "history"
 TRASH_DIR = REPO_ROOT / "lan_modder" / "trash_mods"
+MOD_META_DIR = REPO_ROOT / "lan_modder" / "mod_meta"
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -356,6 +357,18 @@ async def get_history(entry_id: str) -> JSONResponse:
     return JSONResponse(item)
 
 
+@app.get("/api/mods/meta/{mod_name}")
+async def get_mod_meta(mod_name: str) -> JSONResponse:
+    try:
+        desc = ""
+        meta_path = MOD_META_DIR / f"{mod_name}.desc.txt"
+        if meta_path.exists():
+            desc = meta_path.read_text(encoding="utf-8", errors="replace")
+        return JSONResponse({"mod_name": mod_name, "description": desc})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/mods/unload")
 async def api_unload_mod(payload: Dict[str, Any]) -> JSONResponse:
     mod_name = payload.get("mod_name")
@@ -455,6 +468,12 @@ async def generate_mod(req: GenerateRequest):
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
         # Save history entry
+        # Persist mod description to mod_meta for quick lookup
+        try:
+            MOD_META_DIR.mkdir(parents=True, exist_ok=True)
+            (MOD_META_DIR / f"{mod_name}.desc.txt").write_text(req.description or data.get("summary", ""), encoding="utf-8")
+        except Exception:
+            pass
         save_history_entry({
             "type": "generate",
             "mod_name": mod_name,
@@ -498,6 +517,14 @@ async def feedback(req: FeedbackRequest):
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
+        # Persist last feedback as description if none exists
+        try:
+            MOD_META_DIR.mkdir(parents=True, exist_ok=True)
+            desc_path = MOD_META_DIR / f"{mod_name}.desc.txt"
+            if not desc_path.exists():
+                desc_path.write_text(req.feedback, encoding="utf-8")
+        except Exception:
+            pass
         save_history_entry({
             "type": "feedback",
             "mod_name": mod_name,
