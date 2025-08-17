@@ -42,6 +42,10 @@
       <span id="genSpinner" style="display:none; margin-left:8px">🤖 AI working…</span>
     </div>
     <pre id="genLog" class="events" style="display:none;margin-top:8px"></pre>
+    <div id="genFilesWrap" style="display:none; margin-top:8px">
+      <h4>Generated Files</h4>
+      <pre id="genFiles" class="events" style="max-height: 240px; overflow:auto"></pre>
+    </div>
   </div>
 
   <div class="card">
@@ -68,6 +72,10 @@
       <span id="fbSpinner" style="display:none; margin-left:8px">🤖 AI working…</span>
     </div>
     <pre id="fbLog" class="events" style="display:none;margin-top:8px"></pre>
+    <div id="fbFilesWrap" style="display:none; margin-top:8px">
+      <h4>Updated Files</h4>
+      <pre id="fbFiles" class="events" style="max-height: 240px; overflow:auto"></pre>
+    </div>
   </div>
 
   <div class="card">
@@ -282,6 +290,11 @@
         const log = data.deploy_log || '';
         const logEl = document.getElementById('genLog');
         if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
+        const files = data.files || {};
+        const filesEl = document.getElementById('genFiles');
+        const wrapEl = document.getElementById('genFilesWrap');
+        const rendered = Object.entries(files).map(([p,c]) => `>>> ${p}\n${c}\n`).join('\n');
+        if (rendered) { wrapEl.style.display = 'block'; filesEl.textContent = rendered.slice(-20000); }
         document.getElementById('fb_mod').value = data.mod_name;
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
@@ -310,6 +323,11 @@
         const log = data.deploy_log || '';
         const logEl = document.getElementById('fbLog');
         if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
+        const files = data.files || {};
+        const filesEl = document.getElementById('fbFiles');
+        const wrapEl = document.getElementById('fbFilesWrap');
+        const rendered = Object.entries(files).map(([p,c]) => `>>> ${p}\n${c}\n`).join('\n');
+        if (rendered) { wrapEl.style.display = 'block'; filesEl.textContent = rendered.slice(-20000); }
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
       } finally {

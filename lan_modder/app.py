@@ -336,7 +336,7 @@ async def generate_mod(req: GenerateRequest):
             "summary": data.get("summary", ""),
             "files": files,
         })
-        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log}
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log, "files": files}
     except Exception as e:
         err = str(e)
         error_event = {"action": "error", "message": err}
@@ -378,7 +378,7 @@ async def feedback(req: FeedbackRequest):
             "feedback": req.feedback,
             "files": files,
         })
-        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log}
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log, "files": files}
     except Exception as e:
         err = str(e)
         error_event = {"action": "error", "message": err}
