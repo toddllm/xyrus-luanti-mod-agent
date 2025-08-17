@@ -376,6 +376,19 @@ def summarize_server_log(max_bytes: int = 10000) -> dict[str, Any]:
     }
 
 
+def detect_mod_from_log(text: str) -> str | None:
+    try:
+        # Look for paths like /mods/<mod>/init.lua near error lines
+        candidates: list[str] = []
+        for m in re.finditer(r"/mods/([^/]+)/init\.lua", text):
+            candidates.append(m.group(1))
+        if candidates:
+            return normalize_mod_name(candidates[-1])
+        return None
+    except Exception:
+        return None
+
+
 @app.get("/api/status")
 async def status() -> JSONResponse:
     try:
@@ -392,6 +405,20 @@ async def status() -> JSONResponse:
                 last_error = ev
                 break
         log_summary = summarize_server_log()
+        # Build auto-fix suggestion if errors exist
+        auto_fix = None
+        if log_summary.get('errors', 0) > 0:
+            # Construct a concise prompt for the model to fix
+            err_lines = "\n".join(log_summary.get('error_samples', [])[:5])
+            mod_guess = detect_mod_from_log(tail_text_file(MINETEST_LOG, max_bytes=20000))
+            auto_fix = {
+                'mod_guess': mod_guess,
+                'prompt': (
+                    "Server errors detected. Please fix the mod accordingly.\n\n"
+                    f"Error samples:\n{err_lines}\n\n"
+                    "Guidance: identify the mod causing these errors, adjust file names, mod.conf name, dependencies, assets, and code as needed."
+                )
+            }
         return JSONResponse({
             'server_running': server_running,
             'enabled_mods_count': sum(1 for v in enabled.values() if v),
@@ -401,6 +428,7 @@ async def status() -> JSONResponse:
             'last_event': last_event,
             'last_error': last_error,
             'server_log': log_summary,
+            'auto_fix': auto_fix,
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

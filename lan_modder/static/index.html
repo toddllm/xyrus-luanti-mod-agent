@@ -46,6 +46,10 @@
       <h4>Generated Files</h4>
       <pre id="genFiles" class="events" style="max-height: 240px; overflow:auto"></pre>
     </div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="autoFix" title="Use log errors to create a fix">Auto‑Fix from Logs</button>
+      <span id="autoFixStatus"></span>
+    </div>
   </div>
 
   <div class="card">
@@ -184,6 +188,12 @@
           lines.push(`Log summary: errors=${s.server_log.errors}, warnings=${s.server_log.warnings}`);
           (s.server_log.error_samples || []).forEach(l => lines.push(`E: ${l}`));
           (s.server_log.warning_samples || []).forEach(l => lines.push(`W: ${l}`));
+        }
+        if (s.auto_fix && s.auto_fix.prompt) {
+          lines.push('');
+          lines.push('Auto-fix suggestion available:');
+          if (s.auto_fix.mod_guess) lines.push(`Possible mod: ${s.auto_fix.mod_guess}`);
+          lines.push(s.auto_fix.prompt);
         }
         document.getElementById('status').textContent = lines.join('\n');
       } catch (e) {
@@ -338,6 +348,27 @@
         status.textContent = 'Error: ' + e.message;
       } finally {
         btn.disabled = false; spin.style.display = 'none';
+      }
+    });
+
+    document.getElementById('autoFix').addEventListener('click', async () => {
+      const status = document.getElementById('autoFixStatus');
+      try {
+        status.textContent = 'Preparing fix prompt...';
+        const res = await fetch('/api/status');
+        const s = await res.json();
+        if (s.auto_fix && s.auto_fix.prompt) {
+          const guess = s.auto_fix.mod_guess || document.getElementById('fb_mod').value;
+          if (guess) document.getElementById('fb_mod').value = guess;
+          document.getElementById('feedback').value = s.auto_fix.prompt;
+          document.getElementById('fb_model').value = 'strong';
+          status.textContent = 'Loaded fix prompt into Feedback.';
+          document.getElementById('feedback').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          status.textContent = 'No errors found to auto-fix.';
+        }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
       }
     });
 
