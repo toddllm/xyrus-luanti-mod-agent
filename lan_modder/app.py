@@ -69,6 +69,37 @@ def select_model(description: str, explicit: str) -> bool:
     return long_desc or mentions >= 2
 
 
+def normalize_mod_name(name: str | None) -> str:
+    if not name:
+        base = datetime.datetime.now().strftime("mod_%Y%m%d_%H%M%S")
+        return base
+    s = name.strip().lower().replace(" ", "_")
+    s = re.sub(r"[^a-z0-9_]", "_", s)
+    s = re.sub(r"_+", "_", s).strip("_")
+    if not s:
+        s = datetime.datetime.now().strftime("mod_%Y%m%d_%H%M%S")
+    return s
+
+
+def ensure_mod_conf(mod_name: str, existing: str | None, summary: str | None = None) -> str:
+    content = existing or ""
+    if content:
+        # Replace or insert name line
+        if re.search(r"^name\s*=", content, flags=re.M):
+            content = re.sub(r"^name\s*=.*$", f"name = {mod_name}", content, flags=re.M)
+        else:
+            content = f"name = {mod_name}\n" + content
+        # Add description if provided and not present
+        if summary and not re.search(r"^description\s*=", content, flags=re.M):
+            content += ("" if content.endswith("\n") else "\n") + f"description = {summary}\n"
+        return content
+    # Build minimal mod.conf
+    out = [f"name = {mod_name}"]
+    if summary:
+        out.append(f"description = {summary}")
+    return "\n".join(out) + "\n"
+
+
 SYSTEM_PROMPT = (
     "You are a Luanti/Minetest mod engineer. Generate a complete, minimal, working mod per the user's description. "
     "Output ONLY one JSON object inside a single fenced code block with language json. "
@@ -448,15 +479,15 @@ async def generate_mod(req: GenerateRequest):
             del recent_events[:-MAX_EVENTS]
         output = await complete(prompt, use_strong=use_strong, system=SYSTEM_PROMPT)
         data = extract_json_block(output)
-        mod_name = req.mod_name or data.get("mod_name")
+        mod_name_input = req.mod_name or data.get("mod_name")
+        mod_name = normalize_mod_name(mod_name_input)
         if not mod_name:
             raise ValueError("Model did not provide mod_name")
         files = data.get("files")
         if not isinstance(files, dict) or not files:
             raise ValueError("Model did not provide files map")
         # Ensure mandatory files
-        if "mod.conf" not in files:
-            files["mod.conf"] = f"name = {mod_name}\noptional_depends = default\n"
+        files["mod.conf"] = ensure_mod_conf(mod_name, files.get("mod.conf"), data.get("summary"))
         if "init.lua" not in files:
             files["init.lua"] = "minetest.log('action', '[%s] loaded')\n" % mod_name
         # Write files synchronously (fast), deploy on a worker thread
@@ -506,10 +537,12 @@ async def feedback(req: FeedbackRequest):
             del recent_events[:-MAX_EVENTS]
         output = await complete(context, use_strong=use_strong, system=FEEDBACK_SYSTEM)
         data = extract_json_block(output)
-        mod_name = data.get("mod_name") or req.mod_name
+        mod_name_input = data.get("mod_name") or req.mod_name
+        mod_name = normalize_mod_name(mod_name_input)
         files = data.get("files")
         if not isinstance(files, dict) or not files:
             raise ValueError("Model did not provide files map")
+        files["mod.conf"] = ensure_mod_conf(mod_name, files.get("mod.conf"), data.get("summary"))
         write_mod(mod_name, files)
         deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
         event = {"action": "feedback", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "log": deploy_log[-2000:]}
