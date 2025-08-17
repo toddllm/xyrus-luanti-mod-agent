@@ -109,6 +109,15 @@
     </div>
   </div>
 
+  <div class="card">
+    <h3>History</h3>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap: wrap;">
+      <button id="refreshHistory">Refresh</button>
+      <span id="historyStatus"></span>
+    </div>
+    <div id="historyList" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+  </div>
+
   <script>
     async function refreshEvents() {
       try {
@@ -178,6 +187,23 @@
     document.getElementById('logAuto').addEventListener('change', () => { scheduleLogs(); });
     refreshLogs();
     scheduleLogs();
+
+    async function refreshHistory() {
+      const status = document.getElementById('historyStatus');
+      try {
+        status.textContent = 'Loading...';
+        const res = await fetch('/api/history?limit=50');
+        const data = await res.json();
+        const items = data.items || [];
+        const lines = items.map(i => `${i.timestamp}  [${i.type}]  ${i.mod_name || ''}  ${i.model || ''}  ${i.summary || ''}  id=${i.id}`);
+        document.getElementById('historyList').textContent = lines.join('\n') || 'No history yet';
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'Error loading history';
+      }
+    }
+    document.getElementById('refreshHistory').addEventListener('click', refreshHistory);
+    refreshHistory();
 
     document.getElementById('gen').addEventListener('click', async () => {
       const btn = document.getElementById('gen');

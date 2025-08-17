@@ -23,6 +23,7 @@ MINETEST_LOG = Path("/var/log/minetest/minetest.log")
 WORLD_MT = Path("/var/games/minetest-server/.minetest/worlds/world/world.mt")
 SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
 REPO_MODS_DIR = REPO_ROOT / "mods"
+HISTORY_DIR = REPO_ROOT / "lan_modder" / "history"
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -167,6 +168,55 @@ def list_mods_in_directory(dir_path: Path) -> list[str]:
     return sorted(names)
 
 
+def save_history_entry(entry: dict[str, Any]) -> str:
+    try:
+        HISTORY_DIR.mkdir(parents=True, exist_ok=True)
+        if "id" not in entry:
+            entry["id"] = datetime.datetime.now().strftime("%Y%m%d%H%M%S") + "-" + str(abs(hash(json.dumps(entry, sort_keys=True))) % 100000)
+        if "timestamp" not in entry:
+            entry["timestamp"] = datetime.datetime.now().isoformat(timespec="seconds")
+        path = HISTORY_DIR / f"{entry['id']}.json"
+        with path.open("w", encoding="utf-8") as f:
+            json.dump(entry, f, ensure_ascii=False, indent=2)
+        return entry["id"]
+    except Exception:
+        return ""
+
+
+def load_history_entry(entry_id: str) -> dict[str, Any] | None:
+    try:
+        path = HISTORY_DIR / f"{entry_id}.json"
+        if not path.exists():
+            return None
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def list_history(limit: int = 50) -> list[dict[str, Any]]:
+    if not HISTORY_DIR.exists():
+        return []
+    items: list[dict[str, Any]] = []
+    try:
+        files = sorted(HISTORY_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)
+        for p in files[:limit]:
+            try:
+                data = json.loads(p.read_text(encoding="utf-8"))
+                items.append({
+                    "id": data.get("id", p.stem),
+                    "type": data.get("type"),
+                    "timestamp": data.get("timestamp"),
+                    "mod_name": data.get("mod_name"),
+                    "model": data.get("model"),
+                    "summary": data.get("summary", ""),
+                })
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return items
+
+
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(str(STATIC_DIR / "index.html"))
@@ -226,6 +276,22 @@ async def list_mods() -> JSONResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/history")
+async def history(limit: int = 50) -> JSONResponse:
+    try:
+        return JSONResponse({"items": list_history(limit=limit)})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/history/{entry_id}")
+async def get_history(entry_id: str) -> JSONResponse:
+    item = load_history_entry(entry_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Not found")
+    return JSONResponse(item)
+
+
 @app.post("/api/generate_mod")
 async def generate_mod(req: GenerateRequest):
     use_strong = select_model(req.description, req.model)
@@ -257,6 +323,15 @@ async def generate_mod(req: GenerateRequest):
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
+        # Save history entry
+        save_history_entry({
+            "type": "generate",
+            "mod_name": mod_name,
+            "model": "strong" if use_strong else "fast",
+            "prompt": req.description,
+            "summary": data.get("summary", ""),
+            "files": files,
+        })
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
@@ -288,6 +363,13 @@ async def feedback(req: FeedbackRequest):
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
+        save_history_entry({
+            "type": "feedback",
+            "mod_name": mod_name,
+            "model": "strong" if use_strong else "fast",
+            "feedback": req.feedback,
+            "files": files,
+        })
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
