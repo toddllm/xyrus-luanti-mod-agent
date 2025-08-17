@@ -20,6 +20,12 @@ Important (sudo without password): the web app calls `tools/load_mod.sh` and `to
 
 ```
 tdeshane ALL=(root) NOPASSWD: /home/tdeshane/luanti/tools/load_mod.sh, /home/tdeshane/luanti/tools/unload_mod.sh, /bin/systemctl, /usr/bin/systemctl
+Additionally, for automatic server restarts from the app:
+
+```
+tdeshane ALL=(root) NOPASSWD: /bin/systemctl restart minetest-server, /usr/bin/systemctl restart minetest-server
+```
+
 ```
 
 Quick start:

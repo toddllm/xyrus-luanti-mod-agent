@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 import subprocess
 
 from lan_modder.ollama_client import complete
-from lan_modder.deployer import write_mod, load_mod, unload_mod
+from lan_modder.deployer import write_mod, load_mod, unload_mod, restart_server, server_is_active
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
@@ -590,6 +590,14 @@ async def generate_mod(req: GenerateRequest):
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
+        # Attempt automatic server restart to apply changes
+        restart_msg = None
+        try:
+            restart_msg = await asyncio.to_thread(restart_server)
+        except Exception as re:
+            restart_msg = f"restart_failed: {re}"
+        if restart_msg:
+            recent_events.append({"action": "server:restart", "message": restart_msg})
         # Save history entry
         # Persist mod description to mod_meta for quick lookup
         try:
@@ -642,6 +650,14 @@ async def feedback(req: FeedbackRequest):
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
         append_activity_log(event, deploy_log)
+        # Try to restart to apply updates
+        restart_msg = None
+        try:
+            restart_msg = await asyncio.to_thread(restart_server)
+        except Exception as re:
+            restart_msg = f"restart_failed: {re}"
+        if restart_msg:
+            recent_events.append({"action": "server:restart", "message": restart_msg})
         # Persist last feedback as description if none exists
         try:
             MOD_META_DIR.mkdir(parents=True, exist_ok=True)

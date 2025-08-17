@@ -43,3 +43,21 @@ def unload_mod(mod_name: str, non_interactive: bool = True) -> str:
     if proc.returncode != 0:
         raise RuntimeError(f"unload_mod failed: {proc.stderr}\n{proc.stdout}")
     return proc.stdout
+
+
+def restart_server() -> str:
+    """Restart the minetest server using systemd. Requires sudo without password."""
+    cmd = ["sudo", "-n", "systemctl", "restart", "minetest-server"]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        # Try without -n in case NOPASSWD not set; it will likely fail silently in web context
+        fallback = subprocess.run(["sudo", "systemctl", "restart", "minetest-server"], capture_output=True, text=True)
+        out = f"restart attempt failed: {proc.stderr}\n{proc.stdout}\nfallback: {fallback.stderr}\n{fallback.stdout}"
+        raise RuntimeError(out)
+    return proc.stdout or "server restart requested"
+
+
+def server_is_active() -> bool:
+    cmd = ["systemctl", "is-active", "minetest-server"]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    return proc.returncode == 0 and proc.stdout.strip() == "active"
