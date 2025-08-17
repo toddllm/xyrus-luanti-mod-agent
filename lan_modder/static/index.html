@@ -64,6 +64,11 @@
         </select>
       </div>
     </div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="archiveMod" title="Archive to trash and unload">Archive & Unload</button>
+      <button id="unloadMod" title="Unload from server (disable/remove)">Unload Only</button>
+      <button id="emptyTrash" title="Permanently delete archived mods">Empty Trash</button>
+    </div>
     <label for="feedback">Feedback</label>
     <textarea id="feedback" rows="5" placeholder="what to improve or fix"></textarea>
     <div style="margin-top: 10px">
@@ -333,6 +338,41 @@
       } finally {
         btn.disabled = false; spin.style.display = 'none';
       }
+    });
+
+    // Archive / Unload / Empty Trash handlers
+    async function postJSON(url, body) {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed');
+      return data;
+    }
+    document.getElementById('archiveMod').addEventListener('click', async () => {
+      const mod = document.getElementById('fb_mod').value;
+      if (!mod) return;
+      try {
+        const data = await postJSON('/api/mods/archive', { mod_name: mod });
+        alert(`Archived and unloaded ${mod}\nRepo: ${data.repo_archive || 'n/a'}\nServer: ${data.server_archive || 'n/a'}`);
+        refreshMods(); refreshLogs(); refreshEvents();
+      } catch (e) { alert('Archive failed: ' + e.message); }
+    });
+    document.getElementById('unloadMod').addEventListener('click', async () => {
+      const mod = document.getElementById('fb_mod').value;
+      if (!mod) return;
+      try {
+        await postJSON('/api/mods/unload', { mod_name: mod });
+        alert(`Unloaded ${mod}`);
+        refreshMods(); refreshLogs(); refreshEvents();
+      } catch (e) { alert('Unload failed: ' + e.message); }
+    });
+    document.getElementById('emptyTrash').addEventListener('click', async () => {
+      if (!confirm('This will permanently delete archived mods in trash. Continue?')) return;
+      try {
+        const res = await fetch('/api/trash/empty', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        alert(`Trash emptied. Removed: ${data.removed}`);
+      } catch (e) { alert('Empty trash failed: ' + e.message); }
     });
   </script>
 </body>

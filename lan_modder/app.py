@@ -24,6 +24,7 @@ WORLD_MT = Path("/var/games/minetest-server/.minetest/worlds/world/world.mt")
 SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
 REPO_MODS_DIR = REPO_ROOT / "mods"
 HISTORY_DIR = REPO_ROOT / "lan_modder" / "history"
+TRASH_DIR = REPO_ROOT / "lan_modder" / "trash_mods"
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -168,6 +169,69 @@ def list_mods_in_directory(dir_path: Path) -> list[str]:
     return sorted(names)
 
 
+def archive_repo_mod(mod_name: str) -> str:
+    src = REPO_MODS_DIR / mod_name
+    if not src.exists():
+        return ""
+    dst_dir = TRASH_DIR / "repo"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    dst = dst_dir / f"{mod_name}-{ts}"
+    import shutil
+    shutil.copytree(src, dst, dirs_exist_ok=False)
+    return str(dst)
+
+
+def archive_server_mod(mod_name: str) -> str:
+    src = SERVER_MODS_DIR / mod_name
+    if not src.exists():
+        return ""
+    dst_dir = TRASH_DIR / "server"
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    dst = dst_dir / f"{mod_name}-{ts}"
+    # Use sudo cp -a to preserve perms; ignore errors if sudo not permitted
+    try:
+        import subprocess
+        subprocess.run(["bash", "-lc", f"sudo cp -a '{src}' '{dst}'"], check=True, capture_output=True, text=True)
+        return str(dst)
+    except Exception:
+        # try read-only copy without sudo
+        try:
+            import shutil
+            shutil.copytree(src, dst)
+            return str(dst)
+        except Exception:
+            return ""
+
+
+def list_trash() -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {"repo": [], "server": []}
+    for kind in out.keys():
+        base = TRASH_DIR / kind
+        if base.exists():
+            out[kind] = sorted([p.name for p in base.iterdir() if p.is_dir()])
+    return out
+
+
+def empty_trash() -> int:
+    if not TRASH_DIR.exists():
+        return 0
+    import shutil
+    count = 0
+    for child in TRASH_DIR.iterdir():
+        try:
+            if child.is_dir():
+                shutil.rmtree(child)
+                count += 1
+            else:
+                child.unlink(missing_ok=True)
+                count += 1
+        except Exception:
+            continue
+    return count
+
+
 def save_history_entry(entry: dict[str, Any]) -> str:
     try:
         HISTORY_DIR.mkdir(parents=True, exist_ok=True)
@@ -290,6 +354,69 @@ async def get_history(entry_id: str) -> JSONResponse:
     if not item:
         raise HTTPException(status_code=404, detail="Not found")
     return JSONResponse(item)
+
+
+@app.post("/api/mods/unload")
+async def api_unload_mod(payload: Dict[str, Any]) -> JSONResponse:
+    mod_name = payload.get("mod_name")
+    if not mod_name:
+        raise HTTPException(status_code=400, detail="mod_name required")
+    try:
+        append_activity_log({"action": "unload:start", "mod_name": mod_name})
+        # Use deployer script which will disable and remove server files (we archived separately when needed)
+        log = await asyncio.to_thread(lambda: unload_mod(mod_name))
+        event = {"action": "unload", "mod_name": mod_name, "log": (log or "")[-2000:]}
+        recent_events.append(event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        append_activity_log(event, log)
+        return JSONResponse({"status": "ok", "mod_name": mod_name, "log": log})
+    except Exception as e:
+        err = str(e)
+        append_activity_log({"action": "error", "message": err})
+        raise HTTPException(status_code=500, detail=err)
+
+
+@app.post("/api/mods/archive")
+async def api_archive_mod(payload: Dict[str, Any]) -> JSONResponse:
+    mod_name = payload.get("mod_name")
+    if not mod_name:
+        raise HTTPException(status_code=400, detail="mod_name required")
+    try:
+        append_activity_log({"action": "archive:start", "mod_name": mod_name})
+        repo_path = archive_repo_mod(mod_name)
+        server_path = archive_server_mod(mod_name)
+        # After archiving, unload to disable/remove from server
+        unload_log = await asyncio.to_thread(lambda: unload_mod(mod_name))
+        event = {"action": "archive", "mod_name": mod_name, "repo_path": repo_path, "server_path": server_path, "log": (unload_log or "")[-2000:]}
+        recent_events.append(event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        append_activity_log(event, unload_log)
+        return JSONResponse({"status": "ok", "mod_name": mod_name, "repo_archive": repo_path, "server_archive": server_path, "unload_log": unload_log})
+    except Exception as e:
+        err = str(e)
+        append_activity_log({"action": "error", "message": err})
+        raise HTTPException(status_code=500, detail=err)
+
+
+@app.get("/api/trash")
+async def api_list_trash() -> JSONResponse:
+    return JSONResponse(list_trash())
+
+
+@app.post("/api/trash/empty")
+async def api_empty_trash() -> JSONResponse:
+    try:
+        count = empty_trash()
+        event = {"action": "trash:empty", "removed": count}
+        recent_events.append(event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        append_activity_log(event)
+        return JSONResponse({"status": "ok", "removed": count})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/generate_mod")
