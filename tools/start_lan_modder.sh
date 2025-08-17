@@ -51,5 +51,5 @@ python -m uvicorn \
   --host "$HOST" \
   --port "$PORT" \
   --reload \
-  --reload-dir "$REPO_ROOT/lan_modder" \
-  --reload-exclude "$REPO_ROOT/lan_modder/activity.log"
+  --reload-dir "lan_modder" \
+  --reload-exclude "lan_modder/activity.log"
