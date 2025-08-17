@@ -301,7 +301,11 @@ async def generate_mod(req: GenerateRequest):
         "Return JSON per schema."
     )
     try:
-        append_activity_log({"action": "generate_mod:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name or "(auto)"})
+        start_event = {"action": "generate_mod:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name or "(auto)"}
+        append_activity_log(start_event)
+        recent_events.append(start_event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
         output = await complete(prompt, use_strong=use_strong, system=SYSTEM_PROMPT)
         data = extract_json_block(output)
         mod_name = req.mod_name or data.get("mod_name")
@@ -349,7 +353,11 @@ async def feedback(req: FeedbackRequest):
         f"Return full updated files."
     )
     try:
-        append_activity_log({"action": "feedback:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name})
+        start_event = {"action": "feedback:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name}
+        append_activity_log(start_event)
+        recent_events.append(start_event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
         output = await complete(context, use_strong=use_strong, system=FEEDBACK_SYSTEM)
         data = extract_json_block(output)
         mod_name = data.get("mod_name") or req.mod_name
