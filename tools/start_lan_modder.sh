@@ -45,4 +45,4 @@ if [[ "${OLLAMA_PULL_ON_START:-false}" == "true" ]] && command -v ollama >/dev/n
 fi
 
 cd "$REPO_ROOT"
-python -m uvicorn lan_modder.app:app --host "$HOST" --port "$PORT"
+python -m uvicorn lan_modder.app:app --host "$HOST" --port "$PORT" --reload
