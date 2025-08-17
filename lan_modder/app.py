@@ -2,6 +2,7 @@ import json
 import re
 import os
 from pathlib import Path
+from collections import deque
 from typing import Dict, Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -14,6 +15,7 @@ from lan_modder.deployer import write_mod, load_mod
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
+LOG_FILE = REPO_ROOT / "lan_modder" / "activity.log"
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -84,6 +86,24 @@ def extract_json_block(text: str) -> Dict[str, Any]:
         return json.loads(raw2)
 
 
+def append_activity_log(entry: dict[str, Any], deploy_log: str | None = None) -> None:
+    try:
+        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with LOG_FILE.open("a", encoding="utf-8") as f:
+            f.write("==== LAN_MODDER EVENT ====" + "\n")
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            if deploy_log:
+                f.write("---- DEPLOY LOG START ----\n")
+                f.write(deploy_log)
+                if not deploy_log.endswith("\n"):
+                    f.write("\n")
+                f.write("---- DEPLOY LOG END ----\n")
+            f.write("\n")
+    except Exception:
+        # Logging must not break the main flow
+        pass
+
+
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(str(STATIC_DIR / "index.html"))
@@ -92,6 +112,21 @@ async def index() -> FileResponse:
 @app.get("/api/events")
 async def events() -> JSONResponse:
     return JSONResponse(recent_events[-50:])
+
+
+@app.get("/api/logs")
+async def logs(offset: int = 0, limit: int = 5000) -> JSONResponse:
+    try:
+        if LOG_FILE.exists():
+            content = LOG_FILE.read_text(encoding="utf-8")
+        else:
+            content = ""
+        # simple tail-like slicing
+        if limit > 0 and len(content) > limit:
+            content = content[-limit:]
+        return JSONResponse({"log": content})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/generate_mod")
@@ -122,6 +157,7 @@ async def generate_mod(req: GenerateRequest):
         recent_events.append(event)
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
+        append_activity_log(event, deploy_log)
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
@@ -149,6 +185,7 @@ async def feedback(req: FeedbackRequest):
         recent_events.append(event)
         if len(recent_events) > MAX_EVENTS:
             del recent_events[:-MAX_EVENTS]
+        append_activity_log(event, deploy_log)
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)

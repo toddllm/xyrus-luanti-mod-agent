@@ -73,6 +73,21 @@
     <div id="events" class="events">Loading...</div>
   </div>
 
+  <div class="card">
+    <h3>Activity Log (tail)</h3>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
+      <button id="refreshLog">Refresh</button>
+      <label for="logLimit" style="margin:0">Max chars</label>
+      <select id="logLimit" style="width:auto">
+        <option value="2000">2k</option>
+        <option value="5000" selected>5k</option>
+        <option value="20000">20k</option>
+      </select>
+      <span id="logStatus"></span>
+    </div>
+    <div id="activityLog" class="events" style="max-height: 320px; overflow:auto">Loading...</div>
+  </div>
+
   <script>
     async function refreshEvents() {
       try {
@@ -86,6 +101,23 @@
     }
     setInterval(refreshEvents, 3000);
     refreshEvents();
+
+    async function refreshLogs() {
+      const limit = parseInt(document.getElementById('logLimit').value, 10);
+      const status = document.getElementById('logStatus');
+      try {
+        status.textContent = 'Loading...';
+        const res = await fetch(`/api/logs?limit=${limit}`);
+        const data = await res.json();
+        document.getElementById('activityLog').textContent = data.log || '';
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'Error loading logs';
+      }
+    }
+    document.getElementById('refreshLog').addEventListener('click', refreshLogs);
+    setInterval(refreshLogs, 5000);
+    refreshLogs();
 
     document.getElementById('gen').addEventListener('click', async () => {
       const btn = document.getElementById('gen');
