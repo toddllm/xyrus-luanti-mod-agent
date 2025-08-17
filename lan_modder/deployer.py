@@ -24,9 +24,10 @@ def write_mod(mod_name: str, files: dict[str, str]) -> Path:
 def load_mod(mod_path_or_name: str, non_interactive: bool = True) -> str:
     cmd = ["sudo", str(LOAD_SCRIPT), mod_path_or_name]
     if non_interactive:
-        # Expect script to ask about replacing and restart; we answer 'y' to both safely
-        # Use yes with limited count
-        proc = subprocess.run(["bash", "-lc", f"yes | {' '.join(cmd)}"], capture_output=True, text=True)
+        env = os.environ.copy()
+        env["NONINTERACTIVE"] = "1"
+        env["AUTO_RESTART"] = "1"
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env)
     else:
         proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
