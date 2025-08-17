@@ -27,4 +27,10 @@ Quick start:
 ```bash
 ./tools/start_lan_modder.sh
 # then open http://<server-ip>:8088/
+
+Note: the start script no longer pulls models by default. If you want it to, run:
+
+```bash
+OLLAMA_PULL_ON_START=true ./tools/start_lan_modder.sh
+```
 ```
