@@ -3,7 +3,9 @@ import json
 import httpx
 from typing import AsyncGenerator, Dict, Any, List
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+_OLLAMA_HOST = os.environ.get("OLLAMA_HOST")
+_OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL")
+OLLAMA_BASE_URL = (_OLLAMA_HOST or _OLLAMA_BASE_URL or "http://127.0.0.1:11434").rstrip("/")
 MODEL_FAST = os.environ.get("OLLAMA_MODEL_FAST", "gpt-oss:20b")
 MODEL_STRONG = os.environ.get("OLLAMA_MODEL_STRONG", "gpt-oss:120b")
 

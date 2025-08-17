@@ -18,11 +18,19 @@ fi
 
 export HOST=0.0.0.0
 export PORT=8088
+# Ensure the app talks to the user ollama daemon
+export OLLAMA_HOST="http://127.0.0.1:11434"
 
 # Ensure Ollama models are present (best-effort)
 if command -v ollama >/dev/null 2>&1; then
-  (ollama pull gpt-oss:20b || true) &
-  (ollama pull gpt-oss:120b || true) &
+  # Pull as the invoking user, not root, so models land in the user's store
+  if [[ -n "${SUDO_USER:-}" ]]; then
+    (sudo -u "$SUDO_USER" -H env OLLAMA_HOST="$OLLAMA_HOST" ollama pull gpt-oss:20b || true) &
+    (sudo -u "$SUDO_USER" -H env OLLAMA_HOST="$OLLAMA_HOST" ollama pull gpt-oss:120b || true) &
+  else
+    (env OLLAMA_HOST="$OLLAMA_HOST" ollama pull gpt-oss:20b || true) &
+    (env OLLAMA_HOST="$OLLAMA_HOST" ollama pull gpt-oss:120b || true) &
+  fi
 fi
 
 cd "$REPO_ROOT"
