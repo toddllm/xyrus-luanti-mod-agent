@@ -33,6 +33,7 @@ class FeedbackRequest(BaseModel):
 
 # naive in-memory log of recent actions
 recent_events: list[dict[str, Any]] = []
+MAX_EVENTS = 200
 
 
 def select_model(description: str, explicit: str) -> bool:
@@ -116,10 +117,12 @@ async def generate_mod(req: GenerateRequest):
         if "init.lua" not in files:
             files["init.lua"] = "minetest.log('action', '[%s] loaded')\n" % mod_name
         write_mod(mod_name, files)
-        load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
-        event = {"action": "generate_mod", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+        deploy_log = load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        event = {"action": "generate_mod", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "log": deploy_log[-2000:]}
         recent_events.append(event)
-        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", "")}
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
         recent_events.append({"action": "error", "message": err})
@@ -141,10 +144,12 @@ async def feedback(req: FeedbackRequest):
         if not isinstance(files, dict) or not files:
             raise ValueError("Model did not provide files map")
         write_mod(mod_name, files)
-        load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
-        event = {"action": "feedback", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+        deploy_log = load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        event = {"action": "feedback", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "log": deploy_log[-2000:]}
         recent_events.append(event)
-        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast"}
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
         recent_events.append({"action": "error", "message": err})

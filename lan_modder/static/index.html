@@ -40,6 +40,7 @@
       <button id="gen">Generate and Deploy</button>
       <span id="genStatus"></span>
     </div>
+    <pre id="genLog" class="events" style="display:none;margin-top:8px"></pre>
   </div>
 
   <div class="card">
@@ -64,6 +65,7 @@
       <button id="sendFeedback">Update and Redeploy</button>
       <span id="fbStatus"></span>
     </div>
+    <pre id="fbLog" class="events" style="display:none;margin-top:8px"></pre>
   </div>
 
   <div class="card">
@@ -101,6 +103,9 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Failed');
         status.textContent = `Deployed ${data.mod_name} using ${data.model}`;
+        const log = data.deploy_log || '';
+        const logEl = document.getElementById('genLog');
+        if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
         document.getElementById('fb_mod').value = data.mod_name;
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
@@ -125,6 +130,9 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Failed');
         status.textContent = `Redeployed ${data.mod_name} using ${data.model}`;
+        const log = data.deploy_log || '';
+        const logEl = document.getElementById('fbLog');
+        if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
       } catch (e) {
         status.textContent = 'Error: ' + e.message;
       } finally {

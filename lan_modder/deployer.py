@@ -21,7 +21,7 @@ def write_mod(mod_name: str, files: dict[str, str]) -> Path:
     return mod_dir
 
 
-def load_mod(mod_path_or_name: str, non_interactive: bool = True) -> None:
+def load_mod(mod_path_or_name: str, non_interactive: bool = True) -> str:
     cmd = ["sudo", str(LOAD_SCRIPT), mod_path_or_name]
     if non_interactive:
         # Expect script to ask about replacing and restart; we answer 'y' to both safely
@@ -31,9 +31,10 @@ def load_mod(mod_path_or_name: str, non_interactive: bool = True) -> None:
         proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"load_mod failed: {proc.stderr}\n{proc.stdout}")
+    return proc.stdout
 
 
-def unload_mod(mod_name: str, non_interactive: bool = True) -> None:
+def unload_mod(mod_name: str, non_interactive: bool = True) -> str:
     cmd = ["sudo", str(UNLOAD_SCRIPT), mod_name]
     if non_interactive:
         proc = subprocess.run(["bash", "-lc", f"yes | {' '.join(cmd)}"], capture_output=True, text=True)
@@ -41,3 +42,4 @@ def unload_mod(mod_name: str, non_interactive: bool = True) -> None:
         proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(f"unload_mod failed: {proc.stderr}\n{proc.stdout}")
+    return proc.stdout
