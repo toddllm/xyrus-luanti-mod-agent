@@ -45,4 +45,11 @@ if [[ "${OLLAMA_PULL_ON_START:-false}" == "true" ]] && command -v ollama >/dev/n
 fi
 
 cd "$REPO_ROOT"
-python -m uvicorn lan_modder.app:app --host "$HOST" --port "$PORT" --reload
+# Auto-reload on code changes; exclude activity log to avoid reload loops
+python -m uvicorn \
+  lan_modder.app:app \
+  --host "$HOST" \
+  --port "$PORT" \
+  --reload \
+  --reload-dir "$REPO_ROOT/lan_modder" \
+  --reload-exclude "$REPO_ROOT/lan_modder/activity.log"
