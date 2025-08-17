@@ -102,17 +102,42 @@ def ensure_mod_conf(mod_name: str, existing: str | None, summary: str | None = N
 
 
 SYSTEM_PROMPT = (
-    "You are a Luanti/Minetest mod engineer. Generate a complete, minimal, working mod per the user's description. "
-    "Output ONLY one JSON object inside a single fenced code block with language json. "
-    "Schema: {\n  'mod_name': str (lowercase, underscores),\n  'summary': str,\n  'files': { 'init.lua': '...lua code...', 'mod.conf': 'name = ...\noptional_depends = default' , ... }\n}. "
-    "Rules: files must be small and runnable; keep code concise; include a correct mod.conf; avoid huge assets; prefer text and minimal textures as placeholders. "
-    "If the request implies multiple steps, start with a minimal MVP."
+    "You are a Luanti/Minetest mod engineer. Generate a complete, minimal, working mod per the user's description.\n"
+    "Output ONLY one JSON object inside a single fenced code block with language json.\n"
+    "Schema: {\\n  'mod_name': str (lowercase, underscores),\\n  'summary': str,\\n  'files': { 'init.lua': '...lua code...', 'mod.conf': 'name = ...' , ... }\\n}.\n"
+    "Acceptance checklist (all must pass):\n"
+    "- Correct mod.conf with lowercase name; description if available\n"
+    "- No external assets required to render basic behavior (fallbacks OK)\n"
+    "- If registering an entity, use a guaranteed-visible sprite (e.g., default_stone.png) unless character.b3d is available\n"
+    "- If the mod needs placement, define a placeable node <mod>:spawn_node that spawns and removes itself\n"
+    "- If user implies simple actions, expose a chat command (e.g., /spawn_<thing>)\n"
+    "- Log actions via minetest.log('action', ...) for punch/rightclick/spawn events\n"
+    "- Avoid large textures, meshes, or unknown dependencies; prefer defaults\n"
+    "- Keep code small; no comments in code other than minimal clarity\n"
+    "Cheat sheet:\n"
+    "- Register node: minetest.register_node('<mod>:spawn_node',{on_construct=function(pos) minetest.add_entity({x=pos.x,y=pos.y+1,z=pos.z},'<mod>:entity'); minetest.set_node(pos,{name='air'}) end})\n"
+    "- Register chat: minetest.register_chatcommand('spawn_<n>',{func=function(name) local p=minetest.get_player_by_name(name); local pos=vector.round(p:get_pos()); minetest.add_entity({x=pos.x,y=pos.y+1,z=pos.z},'<mod>:entity'); return true,'ok' end})\n"
+    "- Minimal sprite entity: minetest.register_entity('<mod>:entity',{initial_properties={visual='sprite',textures={'default_stone.png'},visual_size={x=4,y=4},nametag='<Name>'}})\n"
 )
 
 FEEDBACK_SYSTEM = (
-    "You are revising an existing Luanti mod. Based on feedback, return FULL updated files. "
-    "Output the same JSON schema as before (mod_name, summary, files). Keep diffs small and focused."
+    "You are revising an existing Luanti mod. Based on feedback, return FULL updated files.\n"
+    "Output the same JSON schema as before (mod_name, summary, files).\n"
+    "Ensure acceptance checklist from system prompt is satisfied. Keep changes minimal and focused."
 )
+
+def build_guided_prompt(user_desc: str) -> str:
+    desc_l = user_desc.lower()
+    guidance: list[str] = []
+    if any(k in desc_l for k in ["spawn", "npc", "entity", "mob"]):
+        guidance.append("Include both a placeable '<mod>:spawn_node' and a '/spawn_<name>' chat command.")
+        guidance.append("Use a sprite fallback (default_stone.png) if no meshes are present.")
+    if any(k in desc_l for k in ["command", "chat", "/"]):
+        guidance.append("Expose a chat command for the primary action.")
+    guidance.append("Add minetest.log('action', ...) in key events for visibility.")
+    if guidance:
+        return user_desc + "\n\nGuidance:\n- " + "\n- ".join(guidance)
+    return user_desc
 
 
 def extract_json_block(text: str) -> Dict[str, Any]:
@@ -558,8 +583,9 @@ async def api_empty_trash() -> JSONResponse:
 @app.post("/api/generate_mod")
 async def generate_mod(req: GenerateRequest):
     use_strong = select_model(req.description, req.model)
+    guided = build_guided_prompt(req.description)
     prompt = (
-        f"User request: {req.description}\n\n"
+        f"User request: {guided}\n\n"
         f"If a specific mod name is given, use it: {req.mod_name or 'none provided'}.\n"
         "Return JSON per schema."
     )
