@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 from collections import deque
 from typing import Dict, Any, Optional
+import threading
+import datetime
+import asyncio
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -40,6 +43,7 @@ class FeedbackRequest(BaseModel):
 # naive in-memory log of recent actions
 recent_events: list[dict[str, Any]] = []
 MAX_EVENTS = 200
+LOG_LOCK = threading.Lock()
 
 
 def select_model(description: str, explicit: str) -> bool:
@@ -93,16 +97,18 @@ def extract_json_block(text: str) -> Dict[str, Any]:
 def append_activity_log(entry: dict[str, Any], deploy_log: str | None = None) -> None:
     try:
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with LOG_FILE.open("a", encoding="utf-8") as f:
-            f.write("==== LAN_MODDER EVENT ====" + "\n")
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-            if deploy_log:
-                f.write("---- DEPLOY LOG START ----\n")
-                f.write(deploy_log)
-                if not deploy_log.endswith("\n"):
-                    f.write("\n")
-                f.write("---- DEPLOY LOG END ----\n")
-            f.write("\n")
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with LOG_LOCK:
+            with LOG_FILE.open("a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] ==== LAN_MODDER EVENT ====\n")
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                if deploy_log:
+                    f.write("---- DEPLOY LOG START ----\n")
+                    f.write(deploy_log)
+                    if not deploy_log.endswith("\n"):
+                        f.write("\n")
+                    f.write("---- DEPLOY LOG END ----\n")
+                f.write("\n")
     except Exception:
         # Logging must not break the main flow
         pass
@@ -229,6 +235,7 @@ async def generate_mod(req: GenerateRequest):
         "Return JSON per schema."
     )
     try:
+        append_activity_log({"action": "generate_mod:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name or "(auto)"})
         output = await complete(prompt, use_strong=use_strong, system=SYSTEM_PROMPT)
         data = extract_json_block(output)
         mod_name = req.mod_name or data.get("mod_name")
@@ -242,8 +249,9 @@ async def generate_mod(req: GenerateRequest):
             files["mod.conf"] = f"name = {mod_name}\noptional_depends = default\n"
         if "init.lua" not in files:
             files["init.lua"] = "minetest.log('action', '[%s] loaded')\n" % mod_name
+        # Write files synchronously (fast), deploy on a worker thread
         write_mod(mod_name, files)
-        deploy_log = load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
         event = {"action": "generate_mod", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "log": deploy_log[-2000:]}
         recent_events.append(event)
         if len(recent_events) > MAX_EVENTS:
@@ -252,7 +260,9 @@ async def generate_mod(req: GenerateRequest):
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "summary": data.get("summary", ""), "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
-        recent_events.append({"action": "error", "message": err})
+        error_event = {"action": "error", "message": err}
+        recent_events.append(error_event)
+        append_activity_log(error_event)
         raise HTTPException(status_code=500, detail=err)
 
 
@@ -264,6 +274,7 @@ async def feedback(req: FeedbackRequest):
         f"Return full updated files."
     )
     try:
+        append_activity_log({"action": "feedback:start", "model": "strong" if use_strong else "fast", "mod_name": req.mod_name})
         output = await complete(context, use_strong=use_strong, system=FEEDBACK_SYSTEM)
         data = extract_json_block(output)
         mod_name = data.get("mod_name") or req.mod_name
@@ -271,7 +282,7 @@ async def feedback(req: FeedbackRequest):
         if not isinstance(files, dict) or not files:
             raise ValueError("Model did not provide files map")
         write_mod(mod_name, files)
-        deploy_log = load_mod(str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
         event = {"action": "feedback", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "log": deploy_log[-2000:]}
         recent_events.append(event)
         if len(recent_events) > MAX_EVENTS:
@@ -280,7 +291,9 @@ async def feedback(req: FeedbackRequest):
         return {"status": "ok", "mod_name": mod_name, "model": "strong" if use_strong else "fast", "deploy_log": deploy_log}
     except Exception as e:
         err = str(e)
-        recent_events.append({"action": "error", "message": err})
+        error_event = {"action": "error", "message": err}
+        recent_events.append(error_event)
+        append_activity_log(error_event)
         raise HTTPException(status_code=500, detail=err)
 
 
