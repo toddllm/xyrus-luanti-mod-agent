@@ -16,6 +16,9 @@ from lan_modder.deployer import write_mod, load_mod
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
 LOG_FILE = REPO_ROOT / "lan_modder" / "activity.log"
+MINETEST_LOG = Path("/var/log/minetest/minetest.log")
+WORLD_MT = Path("/var/games/minetest-server/.minetest/worlds/world/world.mt")
+SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
 
 app = FastAPI(title="LAN Modder")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -104,6 +107,46 @@ def append_activity_log(entry: dict[str, Any], deploy_log: str | None = None) ->
         pass
 
 
+def tail_text_file(path: Path, max_bytes: int = 20000) -> str:
+    try:
+        if not path.exists():
+            return ""
+        size = path.stat().st_size
+        with path.open("rb") as f:
+            if size > max_bytes:
+                f.seek(-max_bytes, 2)
+            data = f.read()
+        try:
+            return data.decode("utf-8", errors="replace")
+        except Exception:
+            return data.decode("latin-1", errors="replace")
+    except Exception as e:
+        return f"<error reading {path}: {e}>"
+
+
+def parse_enabled_mods(world_mt_path: Path) -> dict[str, bool]:
+    enabled: dict[str, bool] = {}
+    try:
+        if not world_mt_path.exists():
+            return enabled
+        text = world_mt_path.read_text(encoding="utf-8", errors="replace")
+        for line in text.splitlines():
+            line = line.strip()
+            if not line.startswith("load_mod_"):
+                continue
+            try:
+                left, right = line.split("=", 1)
+                mod_key = left.strip()
+                value = right.strip().lower() == "true"
+                mod_name = mod_key[len("load_mod_"):].strip()
+                enabled[mod_name] = value
+            except ValueError:
+                continue
+    except Exception:
+        pass
+    return enabled
+
+
 @app.get("/")
 async def index() -> FileResponse:
     return FileResponse(str(STATIC_DIR / "index.html"))
@@ -117,14 +160,18 @@ async def events() -> JSONResponse:
 @app.get("/api/logs")
 async def logs(offset: int = 0, limit: int = 5000) -> JSONResponse:
     try:
-        if LOG_FILE.exists():
-            content = LOG_FILE.read_text(encoding="utf-8")
-        else:
-            content = ""
-        # simple tail-like slicing
-        if limit > 0 and len(content) > limit:
-            content = content[-limit:]
-        return JSONResponse({"log": content})
+        app_log = tail_text_file(LOG_FILE, max_bytes=max(1000, limit))
+        server_log = tail_text_file(MINETEST_LOG, max_bytes=max(1000, limit))
+        enabled_mods = parse_enabled_mods(WORLD_MT)
+        deployed_mods = []
+        if SERVER_MODS_DIR.exists():
+            deployed_mods = sorted([p.name for p in SERVER_MODS_DIR.iterdir() if p.is_dir()])
+        return JSONResponse({
+            "lan_modder_log": app_log,
+            "minetest_log": server_log,
+            "enabled_mods": enabled_mods,
+            "deployed_mods": deployed_mods,
+        })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

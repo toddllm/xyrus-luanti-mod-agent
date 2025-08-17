@@ -74,7 +74,7 @@
   </div>
 
   <div class="card">
-    <h3>Activity Log (tail)</h3>
+    <h3>Activity & Server Logs</h3>
     <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
       <button id="refreshLog">Refresh</button>
       <label for="logLimit" style="margin:0">Max chars</label>
@@ -85,7 +85,20 @@
       </select>
       <span id="logStatus"></span>
     </div>
-    <div id="activityLog" class="events" style="max-height: 320px; overflow:auto">Loading...</div>
+    <div class="row">
+      <div>
+        <h4>LAN Modder Log</h4>
+        <div id="activityLog" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+      </div>
+      <div>
+        <h4>Minetest Server Log</h4>
+        <div id="serverLog" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <h4>Mods Overview</h4>
+      <div id="modsOverview" class="events" style="max-height: 160px; overflow:auto"></div>
+    </div>
   </div>
 
   <script>
@@ -109,7 +122,18 @@
         status.textContent = 'Loading...';
         const res = await fetch(`/api/logs?limit=${limit}`);
         const data = await res.json();
-        document.getElementById('activityLog').textContent = data.log || '';
+        document.getElementById('activityLog').textContent = data.lan_modder_log || '';
+        document.getElementById('serverLog').textContent = data.minetest_log || '';
+        const enabled = data.enabled_mods || {};
+        const deployed = data.deployed_mods || [];
+        const lines = [
+          `Enabled mods in world.mt:`,
+          ...Object.entries(enabled).map(([k,v]) => `- ${k}: ${v ? 'ON' : 'off'}`),
+          '',
+          `Deployed mods on server:`,
+          ...deployed.map(m => `- ${m}`)
+        ];
+        document.getElementById('modsOverview').textContent = lines.join('\n');
         status.textContent = '';
       } catch (e) {
         status.textContent = 'Error loading logs';
