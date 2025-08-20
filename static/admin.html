@@ -41,8 +41,10 @@
       flex-wrap: wrap;
       gap: 4px;
       justify-content: center;
-      padding: 5px;
+      padding: 5px 0;
       width: 100%;
+      overflow: hidden;
+      max-width: 100%;
     }
     
     .form-card button {
@@ -177,7 +179,7 @@
       height: 100%;
       min-height: 450px;
       position: relative;
-      overflow: hidden;
+      overflow: visible;
     }
     .form-card:hover {
       transform: scale(1.05);
@@ -817,7 +819,7 @@ No changes previewed yet...
           // Add hover menu for quick actions
           formDiv.style.position = 'relative';
           formDiv.innerHTML = `
-            <div style="position: absolute; top: 5px; right: 5px; display: flex; gap: 2px; z-index: 10;">
+            <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10;">
               <button class="quick-action-btn edit" onclick="editForm('${form.name}')" title="Edit Properties" aria-label="Edit">✏️</button>
               <button class="quick-action-btn duplicate" onclick="duplicateForm('${form.name}')" title="Duplicate" aria-label="Duplicate">📋</button>
               <button class="quick-action-btn delete" onclick="deleteForm('${form.name}')" title="Delete" aria-label="Delete">🗑️</button>
