@@ -5,6 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Xyrus Admin - Image Management</title>
   <style>
+    /* Better form card styling */
+    .form-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: contain;
+      margin: 10px 0;
+      background: rgba(0,0,0,0.3);
+      border-radius: 5px;
+    }
+    
+    .form-card h4 {
+      margin: 10px 0;
+      color: #00ffff;
+      cursor: pointer;
+    }
+    
+    .form-card .form-actions {
+      margin-top: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      justify-content: center;
+    }
+    
+    .form-card button {
+      flex: 1;
+      min-width: 80px;
+      padding: 8px 5px;
+      font-size: 11px;
+      margin: 2px;
+    }
+    
+    #formEditorModal .card {
+      max-width: 700px;
+      width: 90%;
+    }
+    
+    #formEditorModal input[type="text"],
+    #formEditorModal textarea {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+    }
+    
+    #formEditorModal label {
+      display: block;
+      margin-top: 10px;
+      color: #00ffff;
+      font-weight: bold;
+    }
     body { 
       font-family: system-ui, sans-serif; 
       margin: 20px; 
@@ -42,9 +92,10 @@
     }
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
       gap: 20px;
       margin: 20px 0;
+      padding: 10px;
     }
     .form-card {
       background: rgba(42, 49, 99, 0.8);
@@ -53,6 +104,10 @@
       padding: 15px;
       text-align: center;
       transition: all 0.3s;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      min-height: 450px;
     }
     .form-card:hover {
       transform: scale(1.05);
@@ -671,30 +726,32 @@ No changes previewed yet...
             : '<span style="color: #00ff00;">✓ Analyzed</span>';
           
           // Add hover menu for quick actions
+          formDiv.style.position = 'relative';
           formDiv.innerHTML = `
-            <div style="position: absolute; top: 5px; right: 5px; display: flex; gap: 5px;">
-              <button onclick="editForm('${form.name}')" style="padding: 5px; font-size: 0.8em; background: #00ff00; color: #000;">✏️</button>
-              <button onclick="duplicateForm('${form.name}')" style="padding: 5px; font-size: 0.8em; background: #ffff00; color: #000;">📋</button>
-              <button onclick="deleteForm('${form.name}')" style="padding: 5px; font-size: 0.8em; background: #ff0000;">🗑️</button>
+            <div style="position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; z-index: 10;">
+              <button onclick="editForm('${form.name}')" title="Edit" style="padding: 3px 6px; font-size: 0.8em; background: #00ff00; color: #000; border-radius: 3px;">✏️</button>
+              <button onclick="duplicateForm('${form.name}')" title="Duplicate" style="padding: 3px 6px; font-size: 0.8em; background: #ffff00; color: #000; border-radius: 3px;">📋</button>
+              <button onclick="deleteForm('${form.name}')" title="Delete" style="padding: 3px 6px; font-size: 0.8em; background: #ff0000; border-radius: 3px;">🗑️</button>
             </div>
-            <h3 style="cursor: pointer;" onclick="quickRename('${form.name}', this)">${formTitle}</h3>
+            <h4 style="cursor: pointer; margin-top: 30px;" onclick="quickRename('${form.name}', this)" title="Click to rename">${formTitle}</h4>
             ${statusBadge}
-            <img src="/api/admin/form_image/${form.name}" class="image-preview" 
+            <img src="/api/admin/form_image/${form.name}" 
+                 alt="${formTitle}"
                  style="cursor: pointer;"
                  onclick="viewFullImage('${form.name}')"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>'" />
-            <p style="font-size: 0.9em; color: #00ffff; cursor: pointer;" 
-               onclick="quickEditPowers('${form.name}', this)">
-              ${form.powers ? form.powers.join(', ') : 'Powers pending...'}
+            <p style="font-size: 0.85em; color: #00ffff; cursor: pointer; min-height: 40px; padding: 5px;" 
+               onclick="quickEditPowers('${form.name}', this)" title="Click to edit powers">
+              ${form.powers ? form.powers.slice(0, 3).join(', ') : 'Powers pending...'}
             </p>
-            <div style="display: flex; gap: 5px; justify-content: center;">
+            <div class="form-actions">
               ${form.type === 'processed' ? `
-                <button onclick="deployForm('${form.name}')" style="font-size: 0.9em;">⚡ Deploy</button>
-                <button onclick="reanalyzeForm('${form.name}')" style="font-size: 0.9em;">🔄 Re-Analyze</button>
+                <button onclick="deployForm('${form.name}')" title="Deploy Form">⚡ Deploy</button>
+                <button onclick="reanalyzeForm('${form.name}')" title="Re-analyze">🔄 Analyze</button>
               ` : `
-                <button onclick="processImage('${form.name}')" style="font-size: 0.9em;">🤖 Process</button>
+                <button onclick="processImage('${form.name}')" title="Process with AI">🤖 Process</button>
               `}
-              <button onclick="exportForm('${form.name}')" style="font-size: 0.9em; background: #9933ff;">💾 Export</button>
+              <button onclick="exportForm('${form.name}')" style="background: #9933ff;" title="Export">💾 Export</button>
             </div>
           `;
           formGrid.appendChild(formDiv);
@@ -931,7 +988,7 @@ No changes previewed yet...
         document.getElementById('editFormName').textContent = form.name;
         document.getElementById('editFormNameInput').value = form.name;
         document.getElementById('editFormPowers').value = form.powers ? form.powers.join(', ') : '';
-        document.getElementById('editFormDescription').value = form.analysis || '';
+        document.getElementById('editFormAnalysis').value = form.analysis || '';
         
         document.getElementById('formEditorModal').style.display = 'flex';
       } catch (e) {
@@ -944,7 +1001,7 @@ No changes previewed yet...
       
       const newName = document.getElementById('editFormNameInput').value;
       const powers = document.getElementById('editFormPowers').value.split(',').map(p => p.trim()).filter(p => p);
-      const description = document.getElementById('editFormDescription').value;
+      const description = document.getElementById('editFormAnalysis').value;
       const fileInput = document.getElementById('editFormImage');
       
       try {

@@ -1584,7 +1584,7 @@ async def duplicate_form(payload: Dict[str, Any]) -> JSONResponse:
         
         data = json.loads(orig_json.read_text())
         data["name"] = new_name
-        data["timestamp"] = datetime.now().isoformat()
+        data["timestamp"] = datetime.datetime.now().isoformat()
         new_json.write_text(json.dumps(data, indent=2))
         
         if orig_img.exists():
