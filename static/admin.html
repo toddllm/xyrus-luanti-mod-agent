@@ -19,6 +19,20 @@
       margin: 10px 0;
       color: #00ffff;
       cursor: pointer;
+      font-size: 16px;
+      font-weight: bold;
+      text-shadow: 0 0 5px rgba(0,255,255,0.5);
+    }
+    
+    .form-card h4:hover {
+      color: #ffff00;
+      text-shadow: 0 0 8px rgba(255,255,0,0.5);
+    }
+    
+    .form-powers:hover {
+      background: rgba(0,255,255,0.1) !important;
+      color: #ffff00 !important;
+      box-shadow: 0 0 10px rgba(0,255,255,0.3);
     }
     
     .form-card .form-actions {
@@ -32,9 +46,49 @@
     .form-card button {
       flex: 1;
       min-width: 80px;
-      padding: 8px 5px;
-      font-size: 11px;
-      margin: 2px;
+      padding: 8px 10px;
+      font-size: 12px;
+      margin: 3px;
+      background: linear-gradient(135deg, #2a3163, #3d4580);
+      border: 1px solid #00ffff;
+      border-radius: 8px;
+      color: #ffffff;
+      font-weight: 600;
+      transition: all 0.3s;
+      text-transform: none;
+      white-space: nowrap;
+    }
+    
+    .form-card button:hover {
+      background: linear-gradient(135deg, #3d4580, #4a5599);
+      box-shadow: 0 0 10px rgba(0,255,255,0.5);
+      transform: translateY(-2px);
+    }
+    
+    .form-card .quick-action-btn {
+      position: absolute;
+      padding: 5px 8px;
+      font-size: 14px;
+      min-width: auto;
+      margin: 0;
+    }
+    
+    .form-card .quick-action-btn.edit {
+      background: linear-gradient(135deg, #00cc00, #00ff00);
+      color: #000;
+      border-color: #00ff00;
+    }
+    
+    .form-card .quick-action-btn.duplicate {
+      background: linear-gradient(135deg, #cccc00, #ffff00);
+      color: #000;
+      border-color: #ffff00;
+    }
+    
+    .form-card .quick-action-btn.delete {
+      background: linear-gradient(135deg, #cc0000, #ff3333);
+      color: #fff;
+      border-color: #ff0000;
     }
     
     #formEditorModal .card {
@@ -296,16 +350,35 @@
 
   <div id="manageTab" class="tab-content">
     <div class="card">
-      <h2>Xyrus Form Management</h2>
-      <div class="form-grid" id="formGrid"></div>
-      <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-        <button onclick="refreshForms()">🔄 Refresh Forms</button>
-        <button onclick="deployAllForms()">⚡ Deploy All Forms</button>
-        <button onclick="activateXyrus()">🌟 ACTIVATE XYRUS</button>
-        <button onclick="document.getElementById('bulkUploadInput').click()" style="background: #00ff00; color: #000;">
-          📤 Bulk Upload Forms
+      <h2 style="color: #00ffff; text-align: center; font-size: 28px; margin-bottom: 10px; text-shadow: 0 0 10px rgba(0,255,255,0.5);">
+        🌟 Xyrus Form Management Center 🌟
+      </h2>
+      <p style="text-align: center; color: #ff66ff; margin-bottom: 20px; font-style: italic;">
+        Manage, deploy, and control all forms of Xyrus
+      </p>
+      
+      <div style="margin-bottom: 20px; padding: 15px; background: rgba(0,255,255,0.1); border-radius: 10px; border: 1px solid #00ffff;">
+        <h3 style="color: #00ff00; margin-bottom: 10px;">Quick Actions</h3>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;">
+        <button onclick="refreshForms()" style="background: linear-gradient(135deg, #0066cc, #0099ff); border: 1px solid #0099ff;" title="Refresh the forms list">
+          🔄 Refresh Forms List
+        </button>
+        <button onclick="deployAllForms()" style="background: linear-gradient(135deg, #ff6600, #ff9933); border: 1px solid #ff9933;" title="Deploy all processed forms">
+          ⚡ Deploy All Forms
+        </button>
+        <button onclick="activateXyrus()" style="background: linear-gradient(135deg, #ff00ff, #ff66ff); border: 1px solid #ff66ff; font-size: 16px; padding: 15px 25px;" title="Activate the full power of Xyrus">
+          🌟 ACTIVATE XYRUS POWER
+        </button>
+        <button onclick="document.getElementById('bulkUploadInput').click()" style="background: linear-gradient(135deg, #00cc00, #00ff00); border: 1px solid #00ff00; color: #000;" title="Upload multiple forms at once">
+          📤 Bulk Upload Multiple Forms
         </button>
         <input type="file" id="bulkUploadInput" multiple accept="image/*" style="display: none;" onchange="handleBulkUpload(this.files)" />
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 10px; padding: 10px; background: rgba(255,0,255,0.05); border-radius: 10px;">
+        <h3 style="color: #ff00ff; margin-bottom: 15px;">Uploaded Forms Gallery</h3>
+        <div class="form-grid" id="formGrid"></div>
       </div>
     </div>
     
@@ -729,9 +802,9 @@ No changes previewed yet...
           formDiv.style.position = 'relative';
           formDiv.innerHTML = `
             <div style="position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; z-index: 10;">
-              <button onclick="editForm('${form.name}')" title="Edit" style="padding: 3px 6px; font-size: 0.8em; background: #00ff00; color: #000; border-radius: 3px;">✏️</button>
-              <button onclick="duplicateForm('${form.name}')" title="Duplicate" style="padding: 3px 6px; font-size: 0.8em; background: #ffff00; color: #000; border-radius: 3px;">📋</button>
-              <button onclick="deleteForm('${form.name}')" title="Delete" style="padding: 3px 6px; font-size: 0.8em; background: #ff0000; border-radius: 3px;">🗑️</button>
+              <button class="quick-action-btn edit" onclick="editForm('${form.name}')" title="Edit Form Properties">✏️</button>
+              <button class="quick-action-btn duplicate" onclick="duplicateForm('${form.name}')" title="Create Duplicate">📋</button>
+              <button class="quick-action-btn delete" onclick="deleteForm('${form.name}')" title="Delete Form">🗑️</button>
             </div>
             <h4 style="cursor: pointer; margin-top: 30px;" onclick="quickRename('${form.name}', this)" title="Click to rename">${formTitle}</h4>
             ${statusBadge}
@@ -740,18 +813,19 @@ No changes previewed yet...
                  style="cursor: pointer;"
                  onclick="viewFullImage('${form.name}')"
                  onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>'" />
-            <p style="font-size: 0.85em; color: #00ffff; cursor: pointer; min-height: 40px; padding: 5px;" 
-               onclick="quickEditPowers('${form.name}', this)" title="Click to edit powers">
-              ${form.powers ? form.powers.slice(0, 3).join(', ') : 'Powers pending...'}
-            </p>
+            <div class="form-powers" style="font-size: 13px; color: #00ffff; cursor: pointer; min-height: 45px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 5px; line-height: 1.4;" 
+                 onclick="quickEditPowers('${form.name}', this)" title="Click to edit powers">
+              <strong style="color: #ff00ff; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Powers:</strong><br>
+              ${form.powers ? form.powers.slice(0, 3).join(' • ') : '<em style="opacity: 0.7;">Awaiting analysis...</em>'}
+            </div>
             <div class="form-actions">
               ${form.type === 'processed' ? `
-                <button onclick="deployForm('${form.name}')" title="Deploy Form">⚡ Deploy</button>
-                <button onclick="reanalyzeForm('${form.name}')" title="Re-analyze">🔄 Analyze</button>
+                <button onclick="deployForm('${form.name}')" title="Deploy this form to production" style="background: linear-gradient(135deg, #0099ff, #00ccff); border-color: #00ccff;">⚡ Deploy Form</button>
+                <button onclick="reanalyzeForm('${form.name}')" title="Re-analyze with Xyrus AI" style="background: linear-gradient(135deg, #ff6600, #ff9933); border-color: #ff9933;">🔄 Re-Analyze</button>
               ` : `
-                <button onclick="processImage('${form.name}')" title="Process with AI">🤖 Process</button>
+                <button onclick="processImage('${form.name}')" title="Process image with Xyrus AI" style="background: linear-gradient(135deg, #00cc66, #00ff88); border-color: #00ff88;">🤖 Process with AI</button>
               `}
-              <button onclick="exportForm('${form.name}')" style="background: #9933ff;" title="Export">💾 Export</button>
+              <button onclick="exportForm('${form.name}')" title="Export form data" style="background: linear-gradient(135deg, #9933ff, #cc66ff); border-color: #cc66ff;">💾 Export Data</button>
             </div>
           `;
           formGrid.appendChild(formDiv);
