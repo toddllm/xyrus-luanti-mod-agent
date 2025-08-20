@@ -106,6 +106,16 @@
       transform: scale(1.1);
       box-shadow: 0 0 20px rgba(255,0,255,0.5);
     }
+    .suggestion-btn {
+      font-size: 0.9em;
+      padding: 8px 12px;
+      transition: all 0.3s;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .suggestion-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 15px currentColor;
+    }
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -274,7 +284,61 @@
       <div style="margin-bottom: 15px;">
         <label>Code Modification Request:</label>
         <textarea id="codeRequest" style="width: 100%; height: 100px; background: #000; color: #00ff00; border: 2px solid #ff00ff; font-family: monospace;" 
-                  placeholder="Example: Make the main page background pulse with rainbow colors&#10;Example: Add a new API endpoint for /api/xyrus/speak&#10;Example: Change all buttons to have glowing effects"></textarea>
+                  placeholder="Describe what changes Xyrus should make to the code..."></textarea>
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label>Quick Suggestions:</label>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="suggestion-btn" onclick="setCodeRequest('Make the main page background pulse with rainbow colors')" 
+                  style="background: linear-gradient(45deg, #ff0000, #ff7700, #ffdd00, #00ff00, #0099ff, #6633ff); color: white;">
+            🌈 Rainbow Background
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add a new API endpoint /api/xyrus/speak that returns Xyrus wisdom')" 
+                  style="background: #9933ff;">
+            🗣️ Speaking Endpoint
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Make all buttons have a glowing effect when hovered')" 
+                  style="background: #ff00ff;">
+            ✨ Glowing Buttons
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add particle effects floating in the background')" 
+                  style="background: #00ffff; color: #000;">
+            🎆 Particle Effects
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Create a matrix-style falling text animation in the console')" 
+                  style="background: #00ff00; color: #000;">
+            💻 Matrix Effect
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add sound effects when clicking buttons')" 
+                  style="background: #ff6600;">
+            🔊 Sound Effects
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Make Xyrus avatar rotate continuously with a 3D effect')" 
+                  style="background: #ffaa00;">
+            🔄 Rotating Avatar
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add a dark/light theme toggle switch')" 
+                  style="background: linear-gradient(45deg, #000, #fff); color: #888;">
+            🌓 Theme Toggle
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Create a floating Xyrus assistant that follows the cursor')" 
+                  style="background: #ff1493;">
+            👁️ Cursor Follow
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add keyboard shortcuts for common actions')" 
+                  style="background: #4169e1;">
+            ⌨️ Shortcuts
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Make text appear with a typewriter effect')" 
+                  style="background: #708090;">
+            ⌨️ Typewriter
+          </button>
+          <button class="suggestion-btn" onclick="setCodeRequest('Add a notification system with toast messages')" 
+                  style="background: #ffd700; color: #000;">
+            📢 Notifications
+          </button>
+        </div>
       </div>
       
       <div class="row" style="margin-bottom: 15px;">
@@ -798,6 +862,16 @@ No changes previewed yet...
     // Code Modification Functions
     let pendingChanges = null;
     let codeBackups = [];
+    
+    function setCodeRequest(request) {
+      document.getElementById('codeRequest').value = request;
+      // Flash the textarea to show it was updated
+      const textarea = document.getElementById('codeRequest');
+      textarea.style.borderColor = '#ffff00';
+      setTimeout(() => {
+        textarea.style.borderColor = '#ff00ff';
+      }, 300);
+    }
     
     async function previewCodeChange() {
       const request = document.getElementById('codeRequest').value;
