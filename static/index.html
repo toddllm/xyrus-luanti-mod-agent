@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Xyrus Mod Agent</title>
+  <style>
+    body { 
+      font-family: system-ui, sans-serif; 
+      margin: 20px; 
+      background: linear-gradient(135deg, #0b1022 0%, #1a0033 50%, #0b1022 100%);
+      color: #e8eefc;
+      animation: backgroundShift 30s ease infinite;
+    }
+    @keyframes backgroundShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .xyrus-display {
+      text-align: center;
+      padding: 30px;
+      background: radial-gradient(circle, rgba(255,0,255,0.1) 0%, transparent 70%);
+      border-radius: 20px;
+      margin-bottom: 30px;
+    }
+    .xyrus-avatar {
+      width: 300px;
+      height: 300px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: 5px solid;
+      border-image: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00) 1;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(255,0,255,0.5);
+    }
+    .xyrus-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: all 0.5s;
+    }
+    .xyrus-title {
+      font-size: 2.5em;
+      margin: 20px 0;
+      background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: glow 2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,0,255,0.5); }
+      50% { text-shadow: 0 0 40px rgba(0,255,255,0.8); }
+    }
+    .xyrus-powers {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .power-badge {
+      background: rgba(0,255,255,0.2);
+      border: 1px solid #00ffff;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    .card { 
+      background: rgba(18, 24, 58, 0.9); 
+      border: 1px solid #2a3163; 
+      border-radius: 10px; 
+      padding: 16px; 
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .admin-link {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 0 20px rgba(255,0,255,0.5);
+    }
+    label { display: block; margin: 8px 0 4px; font-weight: 600; }
+    textarea, input, select { width: 100%; box-sizing: border-box; background: #0e1430; color: #e8eefc; border: 1px solid #2a3163; border-radius: 8px; padding: 10px; }
+    button { background: #3a6ff7; color: white; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .events { font-family: ui-monospace, monospace; white-space: pre-wrap; font-size: 12px; background: #0e1430; padding: 10px; border-radius: 8px; border: 1px solid #2a3163; }
+  </style>
+</head>
+<body>
+  <!-- Admin access hidden until auth implemented -->
+  
+  <div class="xyrus-display">
+    <h1 class="xyrus-title">XYRUS</h1>
+    <div class="xyrus-avatar" id="xyrusAvatar">
+      <img id="xyrusImage" src="/api/admin/form_image/xyrus_0" alt="Xyrus Form" 
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23ff00ff%22/><text x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2240%22>X</text></svg>'" />
+    </div>
+    <div id="xyrusInfo">
+      <h2 id="currentForm">Loading Form...</h2>
+      <div class="xyrus-powers" id="xyrusPowers">
+        <span class="power-badge">Initializing...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Summon Xyrus - Generate Mod</h2>
+    <label for="desc">Describe the mod</label>
+    <textarea id="desc" rows="6" placeholder="e.g., add a simple teleport wand command /twand that teleports you 10 nodes forward"></textarea>
+    <div style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="preset" data-prompt="NPC: A friendly guard. Right-click shows a hello dialog; also add /spawn_guard and guard:spawn_node.">Preset: NPC with UI & spawn</button>
+      <button class="preset" data-prompt="Utility: Add /home to teleport to spawn; show a HUD message when used.">Preset: Chat + HUD</button>
+      <button class="preset" data-prompt="Crafting: Add a shiny stone item with a simple recipe; right-click shows a small formspec.">Preset: Craft + UI</button>
+    </div>
+    <div class="row">
+      <div>
+        <label for="modname">Mod name (optional)</label>
+        <input id="modname" placeholder="lowercase_with_underscores" />
+      </div>
+      <div>
+        <label for="model">Model</label>
+        <select id="model">
+          <option value="auto" selected>Auto (20B for easy, 120B for hard)</option>
+          <option value="fast">Fast (20B)</option>
+          <option value="strong">Strong (120B)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top: 10px">
+      <button id="gen">Generate and Deploy</button>
+      <span id="genStatus"></span>
+      <span id="genSpinner" style="display:none; margin-left:8px">🤖 AI working…</span>
+    </div>
+    <pre id="genLog" class="events" style="display:none;margin-top:8px"></pre>
+    <div id="genFilesWrap" style="display:none; margin-top:8px">
+      <h4>Generated Files</h4>
+      <pre id="genFiles" class="events" style="max-height: 240px; overflow:auto"></pre>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="autoFix" title="Use log errors to create a fix">Auto‑Fix from Logs</button>
+      <span id="autoFixStatus"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Give Feedback</h2>
+    <div class="row">
+      <div>
+        <label for="fb_mod">Mod name</label>
+        <select id="fb_mod"></select>
+      </div>
+      <div>
+        <label for="fb_model">Model</label>
+        <select id="fb_model">
+          <option value="auto" selected>Auto</option>
+          <option value="fast">Fast (20B)</option>
+          <option value="strong">Strong (120B)</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      <button id="archiveMod" title="Archive to trash and unload">Archive & Unload</button>
+      <button id="unloadMod" title="Unload from server (disable/remove)">Unload Only</button>
+      <button id="emptyTrash" title="Permanently delete archived mods">Empty Trash</button>
+    </div>
+    <label for="feedback">Feedback</label>
+    <textarea id="feedback" rows="5" placeholder="what to improve or fix"></textarea>
+    <div style="margin-top:8px">
+      <button id="loadMeta">Load Saved Description</button>
+      <span id="metaStatus"></span>
+    </div>
+    <div style="margin-top: 10px">
+      <button id="sendFeedback">Update and Redeploy</button>
+      <span id="fbStatus"></span>
+      <span id="fbSpinner" style="display:none; margin-left:8px">🤖 AI working…</span>
+    </div>
+    <pre id="fbLog" class="events" style="display:none;margin-top:8px"></pre>
+    <div id="fbFilesWrap" style="display:none; margin-top:8px">
+      <h4>Updated Files</h4>
+      <pre id="fbFiles" class="events" style="max-height: 240px; overflow:auto"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Status & Recent Events</h3>
+    <div class="row">
+      <div>
+        <h4>Server Status</h4>
+        <div id="status" class="events">Loading...</div>
+      </div>
+      <div>
+        <h4>Recent Events</h4>
+        <div id="events" class="events">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Activity & Server Logs</h3>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap: wrap;">
+      <button id="refreshLog">Refresh</button>
+      <label for="logLimit" style="margin:0">Max chars</label>
+      <select id="logLimit" style="width:auto">
+        <option value="2000">2k</option>
+        <option value="5000" selected>5k</option>
+        <option value="20000">20k</option>
+      </select>
+      <label for="logAuto" style="margin:0">Auto-refresh</label>
+      <select id="logAuto" style="width:auto">
+        <option value="off">Off</option>
+        <option value="5000">Every 5s</option>
+        <option value="15000" selected>Every 15s</option>
+        <option value="30000">Every 30s</option>
+        <option value="60000">Every 60s</option>
+      </select>
+      <span id="logStatus"></span>
+    </div>
+    <div class="row">
+      <div>
+        <h4>Xyrus Log</h4>
+        <div id="activityLog" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+      </div>
+      <div>
+        <h4>Minetest Server Log</h4>
+        <div id="serverLog" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      <h4>Mods Overview</h4>
+      <div id="modsOverview" class="events" style="max-height: 160px; overflow:auto"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>History</h3>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px; flex-wrap: wrap;">
+      <button id="refreshHistory">Refresh</button>
+      <span id="historyStatus"></span>
+    </div>
+    <div class="row">
+      <div>
+        <label for="historySelect">Select an attempt</label>
+        <select id="historySelect" style="width:100%"></select>
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="loadGen">Load into Generate</button>
+          <button id="loadFb">Load into Feedback</button>
+        </div>
+      </div>
+      <div>
+        <label>Recent attempts (tail)</label>
+        <div id="historyList" class="events" style="max-height: 220px; overflow:auto">Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function refreshEvents() {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        const txt = data.map(e => `[${new Date().toLocaleTimeString()}] ${e.action}: ${e.mod_name || ''} ${e.model || ''} ${e.message || ''}`).join('\n');
+        document.getElementById('events').textContent = txt || 'No events yet';
+      } catch (e) {
+        document.getElementById('events').textContent = 'Error loading events';
+      }
+    }
+    async function refreshStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const s = await res.json();
+        const lines = [];
+        lines.push(`Server: ${s.server_running ? 'ONLINE' : 'OFFLINE'}`);
+        lines.push(`Enabled mods: ${s.enabled_mods_count}`);
+        lines.push(`Deployed mods: ${s.deployed_mods_count}`);
+        if (s.last_event) lines.push(`Last event: ${s.last_event.action} ${s.last_event.mod_name || ''}`);
+        if (s.last_error) lines.push(`Last error: ${s.last_error.message}`);
+        if (s.server_log) {
+          lines.push(`Log summary: errors=${s.server_log.errors}, warnings=${s.server_log.warnings}`);
+          (s.server_log.error_samples || []).forEach(l => lines.push(`E: ${l}`));
+          (s.server_log.warning_samples || []).forEach(l => lines.push(`W: ${l}`));
+        }
+        if (s.auto_fix && s.auto_fix.prompt) {
+          lines.push('');
+          lines.push('Auto-fix suggestion available:');
+          if (s.auto_fix.mod_guess) lines.push(`Possible mod: ${s.auto_fix.mod_guess}`);
+          lines.push(s.auto_fix.prompt);
+        }
+        document.getElementById('status').textContent = lines.join('\n');
+      } catch (e) {
+        document.getElementById('status').textContent = 'Error loading status';
+      }
+    }
+    async function refreshMods() {
+      try {
+        const res = await fetch('/api/mods');
+        const data = await res.json();
+        const sel = document.getElementById('fb_mod');
+        const current = sel.value;
+        sel.innerHTML = '';
+        (data.mods || []).forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.name; opt.textContent = `${m.name}${m.enabled ? ' (enabled)' : ''}${m.on_server ? '' : ' [not on server]'}`;
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+      } catch (e) {
+        // ignore
+      }
+    }
+    setInterval(refreshMods, 15000);
+    refreshMods();
+    setInterval(() => { refreshEvents(); refreshStatus(); }, 5000);
+    refreshEvents(); refreshStatus();
+
+    async function refreshLogs() {
+      const limit = parseInt(document.getElementById('logLimit').value, 10);
+      const status = document.getElementById('logStatus');
+      try {
+        status.textContent = 'Loading...';
+        const res = await fetch(`/api/logs?limit=${limit}`);
+        const data = await res.json();
+        document.getElementById('activityLog').textContent = data.xyrus_log || '';
+        document.getElementById('serverLog').textContent = data.minetest_log || '';
+        const enabled = data.enabled_mods || {};
+        const deployed = data.deployed_mods || [];
+        const lines = [
+          `Enabled mods in world.mt:`,
+          ...Object.entries(enabled).map(([k,v]) => `- ${k}: ${v ? 'ON' : 'off'}`),
+          '',
+          `Deployed mods on server:`,
+          ...deployed.map(m => `- ${m}`)
+        ];
+        document.getElementById('modsOverview').textContent = lines.join('\n');
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'Error loading logs';
+      }
+    }
+    document.getElementById('refreshLog').addEventListener('click', refreshLogs);
+    let logTimer = null;
+    function scheduleLogs() {
+      if (logTimer) { clearInterval(logTimer); logTimer = null; }
+      const v = document.getElementById('logAuto').value;
+      if (v !== 'off') {
+        logTimer = setInterval(refreshLogs, parseInt(v, 10));
+      }
+    }
+    document.getElementById('logAuto').addEventListener('change', () => { scheduleLogs(); });
+    refreshLogs();
+    scheduleLogs();
+
+    async function refreshHistory() {
+      const status = document.getElementById('historyStatus');
+      try {
+        status.textContent = 'Loading...';
+        const res = await fetch('/api/history?limit=50');
+        const data = await res.json();
+        const items = data.items || [];
+        const lines = items.map(i => `${i.timestamp}  [${i.type}]  ${i.mod_name || ''}  ${i.model || ''}  ${i.summary || ''}  id=${i.id}`);
+        document.getElementById('historyList').textContent = lines.join('\n') || 'No history yet';
+        // populate selector
+        const sel = document.getElementById('historySelect');
+        const current = sel.value;
+        sel.innerHTML = '';
+        items.forEach(i => {
+          const opt = document.createElement('option');
+          opt.value = i.id;
+          opt.textContent = `${i.timestamp} [${i.type}] ${i.mod_name || ''} ${i.model || ''}`;
+          sel.appendChild(opt);
+        });
+        if (current) sel.value = current;
+        status.textContent = '';
+      } catch (e) {
+        status.textContent = 'Error loading history';
+      }
+    }
+    document.getElementById('refreshHistory').addEventListener('click', refreshHistory);
+    refreshHistory();
+
+    async function loadHistoryDetail(id) {
+      const res = await fetch(`/api/history/${id}`);
+      if (!res.ok) throw new Error('Failed to load history');
+      return await res.json();
+    }
+
+    document.getElementById('loadGen').addEventListener('click', async () => {
+      const id = document.getElementById('historySelect').value;
+      if (!id) return;
+      try {
+        const item = await loadHistoryDetail(id);
+        if (item.prompt) document.getElementById('desc').value = item.prompt;
+        if (item.mod_name) document.getElementById('modname').value = item.mod_name;
+        if (item.model) document.getElementById('model').value = (item.model === 'strong' ? 'strong' : (item.model === 'fast' ? 'fast' : 'auto'));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (e) {}
+    });
+
+    document.getElementById('loadFb').addEventListener('click', async () => {
+      const id = document.getElementById('historySelect').value;
+      if (!id) return;
+      try {
+        const item = await loadHistoryDetail(id);
+        if (item.mod_name) document.getElementById('fb_mod').value = item.mod_name;
+        if (item.feedback) document.getElementById('feedback').value = item.feedback;
+        if (item.model) document.getElementById('fb_model').value = (item.model === 'strong' ? 'strong' : (item.model === 'fast' ? 'fast' : 'auto'));
+        // scroll to Feedback card
+        document.getElementById('feedback').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e) {}
+    });
+
+    document.getElementById('gen').addEventListener('click', async () => {
+      const btn = document.getElementById('gen');
+      const status = document.getElementById('genStatus');
+      const spin = document.getElementById('genSpinner');
+      btn.disabled = true; status.textContent = 'Generating...'; spin.style.display = 'inline';
+      try {
+        const body = {
+          description: document.getElementById('desc').value,
+          mod_name: document.getElementById('modname').value || null,
+          model: document.getElementById('model').value,
+        };
+        const res = await fetch('/api/generate_mod', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        status.textContent = `Deployed ${data.mod_name} using ${data.model}`;
+        const log = data.deploy_log || '';
+        const logEl = document.getElementById('genLog');
+        if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
+        const files = data.files || {};
+        const filesEl = document.getElementById('genFiles');
+        const wrapEl = document.getElementById('genFilesWrap');
+        const rendered = Object.entries(files).map(([p,c]) => `>>> ${p}\n${c}\n`).join('\n');
+        if (rendered) { wrapEl.style.display = 'block'; filesEl.textContent = rendered.slice(-20000); }
+        document.getElementById('fb_mod').value = data.mod_name;
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false; spin.style.display = 'none';
+      }
+    });
+
+    // Preset prompt buttons
+    document.querySelectorAll('button.preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const t = document.getElementById('desc');
+        const p = btn.getAttribute('data-prompt');
+        t.value = (t.value ? (t.value + '\n\n') : '') + p;
+        t.focus();
+      });
+    });
+
+    document.getElementById('autoFix').addEventListener('click', async () => {
+      const status = document.getElementById('autoFixStatus');
+      try {
+        status.textContent = 'Preparing fix prompt...';
+        const res = await fetch('/api/status');
+        const s = await res.json();
+        if (s.auto_fix && s.auto_fix.prompt) {
+          const guess = s.auto_fix.mod_guess || document.getElementById('fb_mod').value;
+          if (guess) document.getElementById('fb_mod').value = guess;
+          document.getElementById('feedback').value = s.auto_fix.prompt;
+          document.getElementById('fb_model').value = 'strong';
+          status.textContent = 'Loaded fix prompt into Feedback.';
+          document.getElementById('feedback').scrollIntoView({ behavior: 'smooth' });
+        } else {
+          status.textContent = 'No errors found to auto-fix.';
+        }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      }
+    });
+
+    document.getElementById('sendFeedback').addEventListener('click', async () => {
+      const btn = document.getElementById('sendFeedback');
+      const status = document.getElementById('fbStatus');
+      const spin = document.getElementById('fbSpinner');
+      btn.disabled = true; status.textContent = 'Updating...'; spin.style.display = 'inline';
+      try {
+        const body = {
+          mod_name: document.getElementById('fb_mod').value,
+          feedback: document.getElementById('feedback').value,
+          model: document.getElementById('fb_model').value,
+        };
+        const res = await fetch('/api/feedback', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        status.textContent = `Redeployed ${data.mod_name} using ${data.model}`;
+        const log = data.deploy_log || '';
+        const logEl = document.getElementById('fbLog');
+        if (log) { logEl.style.display = 'block'; logEl.textContent = log.slice(-4000); }
+        const files = data.files || {};
+        const filesEl = document.getElementById('fbFiles');
+        const wrapEl = document.getElementById('fbFilesWrap');
+        const rendered = Object.entries(files).map(([p,c]) => `>>> ${p}\n${c}\n`).join('\n');
+        if (rendered) { wrapEl.style.display = 'block'; filesEl.textContent = rendered.slice(-20000); }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      } finally {
+        btn.disabled = false; spin.style.display = 'none';
+      }
+    });
+
+    // Archive / Unload / Empty Trash handlers
+    async function postJSON(url, body) {
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || 'Failed');
+      return data;
+    }
+    document.getElementById('archiveMod').addEventListener('click', async () => {
+      const mod = document.getElementById('fb_mod').value;
+      if (!mod) return;
+      try {
+        const data = await postJSON('/api/mods/archive', { mod_name: mod });
+        alert(`Archived and unloaded ${mod}\nRepo: ${data.repo_archive || 'n/a'}\nServer: ${data.server_archive || 'n/a'}`);
+        refreshMods(); refreshLogs(); refreshEvents();
+      } catch (e) { alert('Archive failed: ' + e.message); }
+    });
+    document.getElementById('unloadMod').addEventListener('click', async () => {
+      const mod = document.getElementById('fb_mod').value;
+      if (!mod) return;
+      try {
+        await postJSON('/api/mods/unload', { mod_name: mod });
+        alert(`Unloaded ${mod}`);
+        refreshMods(); refreshLogs(); refreshEvents();
+      } catch (e) { alert('Unload failed: ' + e.message); }
+    });
+    document.getElementById('loadMeta').addEventListener('click', async () => {
+      const mod = document.getElementById('fb_mod').value;
+      if (!mod) return;
+      const status = document.getElementById('metaStatus');
+      try {
+        status.textContent = 'Loading...';
+        const res = await fetch(`/api/mods/meta/${encodeURIComponent(mod)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        if (data.description) {
+          // Put the saved description into the Generate box for reuse
+          document.getElementById('desc').value = data.description;
+          status.textContent = 'Loaded into Generate';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          status.textContent = 'No saved description yet.';
+        }
+      } catch (e) {
+        status.textContent = 'Error: ' + e.message;
+      }
+    });
+    document.getElementById('emptyTrash').addEventListener('click', async () => {
+      if (!confirm('This will permanently delete archived mods in trash. Continue?')) return;
+      try {
+        const res = await fetch('/api/trash/empty', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed');
+        alert(`Trash emptied. Removed: ${data.removed}`);
+      } catch (e) { alert('Empty trash failed: ' + e.message); }
+    });
+
+    // Xyrus Dynamic Display System
+    let xyrusForms = [];
+    let currentFormIndex = 0;
+    let transformationInterval = null;
+    
+    // Load Xyrus forms from admin configuration
+    async function loadXyrusForms() {
+      try {
+        const res = await fetch('/api/admin/list_forms');
+        const data = await res.json();
+        
+        xyrusForms = data.forms.filter(f => f.type === 'processed' || f.name.includes('xyrus'));
+        
+        if (xyrusForms.length === 0) {
+          // No forms processed yet, show default
+          document.getElementById('currentForm').textContent = 'Awaiting Admin Configuration';
+          document.getElementById('xyrusPowers').innerHTML = 
+            '<span class="power-badge">Visit Admin Panel to Upload Forms</span>';
+        } else {
+          // Start the transformation cycle
+          displayCurrentForm();
+          startTransformationCycle();
+        }
+      } catch (e) {
+        console.error('Error loading forms:', e);
+      }
+    }
+    
+    function displayCurrentForm() {
+      if (xyrusForms.length === 0) return;
+      
+      const form = xyrusForms[currentFormIndex];
+      const img = document.getElementById('xyrusImage');
+      const info = document.getElementById('currentForm');
+      const powers = document.getElementById('xyrusPowers');
+      
+      // Update image with smooth transition
+      img.style.opacity = '0';
+      setTimeout(() => {
+        img.src = `/api/admin/form_image/${form.name}`;
+        img.style.opacity = '1';
+      }, 300);
+      
+      // Update form info
+      info.textContent = form.name ? 
+        `Form ${currentFormIndex + 1}: ${form.name.replace(/_/g, ' ').toUpperCase()}` :
+        `Form ${currentFormIndex + 1}`;
+      
+      // Update powers display
+      if (form.powers && form.powers.length > 0) {
+        powers.innerHTML = form.powers.map(p => 
+          `<span class="power-badge">${p}</span>`
+        ).join('');
+      } else {
+        powers.innerHTML = '<span class="power-badge">Unlimited Power</span>';
+      }
+      
+      // AI-driven description update
+      updateFormDescription(form);
+    }
+    
+    async function updateFormDescription(form) {
+      // Use AI to generate dynamic description based on current form
+      try {
+        const res = await fetch('/api/admin/ai_command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: `Describe what users see when Xyrus is in form: ${form.name}. Be brief and powerful.`
+          })
+        });
+        
+        const data = await res.json();
+        if (data.response) {
+          // Could update a description element if desired
+          console.log('Xyrus speaks:', data.response);
+        }
+      } catch (e) {
+        // Silent fail, not critical
+      }
+    }
+    
+    function startTransformationCycle() {
+      // Cycle through forms every 10 seconds
+      if (transformationInterval) clearInterval(transformationInterval);
+      
+      transformationInterval = setInterval(() => {
+        currentFormIndex = (currentFormIndex + 1) % xyrusForms.length;
+        displayCurrentForm();
+        
+        // Add transformation effect
+        const avatar = document.getElementById('xyrusAvatar');
+        avatar.style.animation = 'none';
+        setTimeout(() => {
+          avatar.style.animation = 'pulse 1s';
+        }, 10);
+      }, 10000);
+    }
+    
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 50px rgba(255,0,255,0.5); }
+        50% { transform: scale(1.1); box-shadow: 0 0 100px rgba(0,255,255,1); }
+        100% { transform: scale(1); box-shadow: 0 0 50px rgba(255,0,255,0.5); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Manual transformation controls
+    document.getElementById('xyrusAvatar').addEventListener('click', () => {
+      if (xyrusForms.length > 0) {
+        currentFormIndex = (currentFormIndex + 1) % xyrusForms.length;
+        displayCurrentForm();
+      }
+    });
+    
+    // Load forms on page load
+    loadXyrusForms();
+    
+    // Refresh forms periodically to catch admin updates
+    setInterval(loadXyrusForms, 30000);
+  </script>
+</body>
+</html>
