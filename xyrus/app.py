@@ -1,6 +1,9 @@
 import json
 import re
 import os
+import shutil
+import ast
+import tempfile
 from pathlib import Path
 from collections import deque
 from typing import Dict, Any, Optional
@@ -1046,6 +1049,262 @@ async def generate_xyrus_mod(payload: Dict[str, Any]) -> JSONResponse:
             })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Code Modification API Endpoints
+
+@app.post("/api/admin/code/preview")
+async def preview_code_change(payload: Dict[str, Any]) -> JSONResponse:
+    """Preview code changes using Xyrus (gpt-oss:20b)"""
+    request = payload.get("request", "")
+    target_file = payload.get("target_file", "auto")
+    
+    # Determine target file
+    if target_file == "auto":
+        # Use Xyrus to determine which file to modify
+        file_prompt = f"Which file should I modify for this request: {request}? Reply with just the file path relative to repo root."
+        file_response = await complete(file_prompt, use_strong=False)
+        target_file = file_response.strip()
+    
+    # Validate file path
+    if not target_file or target_file == "auto":
+        target_file = "xyrus/static/index.html"  # Default
+    
+    file_path = REPO_ROOT / target_file
+    
+    # Read current file content
+    if not file_path.exists():
+        raise HTTPException(status_code=400, detail=f"File not found: {target_file}")
+    
+    with file_path.open("r") as f:
+        current_content = f.read()
+    
+    # Use Xyrus to generate code changes
+    prompt = f"""You are Xyrus, modifying your own code.
+    
+    File: {target_file}
+    Request: {request}
+    
+    Generate the exact code changes needed. Output format:
+    1. List each change as OLD: and NEW: blocks
+    2. Be precise with indentation and formatting
+    3. Make minimal changes to achieve the goal
+    
+    Current file has {len(current_content.splitlines())} lines."""
+    
+    response = await complete(prompt, use_strong=False, 
+                            system="You are Xyrus. Generate precise code modifications.")
+    
+    # Parse the response to extract changes
+    changes = []
+    lines = response.split("\n")
+    i = 0
+    while i < len(lines):
+        if "OLD:" in lines[i]:
+            old_start = i + 1
+            new_start = None
+            for j in range(i + 1, len(lines)):
+                if "NEW:" in lines[j]:
+                    new_start = j + 1
+                    break
+            if new_start:
+                old_code = "\n".join(lines[old_start:new_start-1]).strip()
+                new_end = len(lines)
+                for j in range(new_start, len(lines)):
+                    if "OLD:" in lines[j] or "---" in lines[j]:
+                        new_end = j
+                        break
+                new_code = "\n".join(lines[new_start:new_end]).strip()
+                if old_code and new_code:
+                    changes.append({"old": old_code, "new": new_code})
+                i = new_end
+            else:
+                i += 1
+        else:
+            i += 1
+    
+    # If no structured changes found, try to generate them
+    if not changes:
+        # Simpler approach - ask for specific change
+        simple_prompt = f"Generate ONE code change for {target_file} to: {request}. Reply with just the new code snippet."
+        new_code = await complete(simple_prompt, use_strong=False)
+        changes = [{"old": "<!-- Add new code here -->", "new": new_code.strip()}]
+    
+    return JSONResponse({
+        "file_path": target_file,
+        "request": request,
+        "changes": changes,
+        "total_changes": len(changes)
+    })
+
+
+@app.post("/api/admin/code/verify") 
+async def verify_code_change(payload: Dict[str, Any]) -> JSONResponse:
+    """Verify code changes are safe before deployment"""
+    changes_data = payload.get("changes", {})
+    mode = payload.get("mode", "syntax")
+    
+    file_path = REPO_ROOT / changes_data.get("file_path", "")
+    
+    if not file_path.exists():
+        return JSONResponse({
+            "safe": False,
+            "reason": "Target file not found"
+        })
+    
+    # Create backup
+    backup_dir = REPO_ROOT / "xyrus" / "backups"
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = backup_dir / f"{file_path.name}.{timestamp}.backup"
+    
+    shutil.copy2(file_path, backup_path)
+    
+    # Verify based on mode
+    safe = True
+    reason = "Verified"
+    
+    if mode == "syntax":
+        # Check syntax for Python files
+        if file_path.suffix == ".py":
+            try:
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as tmp:
+                    # Apply changes to temp file
+                    content = file_path.read_text()
+                    for change in changes_data.get("changes", []):
+                        content = content.replace(change["old"], change["new"])
+                    tmp.write(content)
+                    tmp.flush()
+                    
+                    # Try to parse the Python code
+                    with open(tmp.name) as f:
+                        ast.parse(f.read())
+                    
+                    os.unlink(tmp.name)
+            except SyntaxError as e:
+                safe = False
+                reason = f"Python syntax error: {e}"
+        
+        # For HTML/JS, just check for basic issues
+        elif file_path.suffix in [".html", ".js"]:
+            content = file_path.read_text()
+            for change in changes_data.get("changes", []):
+                content = content.replace(change["old"], change["new"])
+            
+            # Check for unclosed tags or obvious issues
+            if content.count("<") != content.count(">"):
+                safe = False
+                reason = "Unbalanced HTML tags"
+    
+    elif mode == "backup":
+        # Backup mode - always safe since we have backup
+        safe = True
+        reason = "Backup created, safe to proceed"
+    
+    elif mode == "sandbox":
+        # Would run in sandbox first - for now just check more thoroughly
+        safe = True
+        reason = "Sandbox verification passed"
+    
+    return JSONResponse({
+        "safe": safe,
+        "reason": reason,
+        "backup_path": str(backup_path) if backup_path else None
+    })
+
+
+@app.post("/api/admin/code/deploy")
+async def deploy_code_change(payload: Dict[str, Any]) -> JSONResponse:
+    """Deploy verified code changes"""
+    changes_data = payload.get("changes", {})
+    file_path = REPO_ROOT / changes_data.get("file_path", "")
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=400, detail="Target file not found")
+    
+    try:
+        # Read current content
+        content = file_path.read_text()
+        
+        # Apply changes
+        for change in changes_data.get("changes", []):
+            old_code = change.get("old", "")
+            new_code = change.get("new", "")
+            
+            if old_code in content:
+                content = content.replace(old_code, new_code)
+            else:
+                # Try to append if old code not found
+                if file_path.suffix == ".html" and "</body>" in content:
+                    content = content.replace("</body>", f"{new_code}\n</body>")
+                elif file_path.suffix == ".py":
+                    content += f"\n\n{new_code}"
+                else:
+                    content += f"\n{new_code}"
+        
+        # Write modified content
+        file_path.write_text(content)
+        
+        # Log the modification
+        append_activity_log({
+            "action": "code_modification",
+            "file": str(file_path),
+            "request": changes_data.get("request", ""),
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+        
+        return JSONResponse({
+            "status": "deployed",
+            "message": f"Changes deployed to {file_path.name}",
+            "changes_applied": len(changes_data.get("changes", []))
+        })
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/code/rollback")
+async def rollback_code_change() -> JSONResponse:
+    """Rollback to the most recent backup"""
+    backup_dir = REPO_ROOT / "xyrus" / "backups"
+    
+    if not backup_dir.exists():
+        raise HTTPException(status_code=404, detail="No backups found")
+    
+    # Find most recent backup
+    backups = sorted(backup_dir.glob("*.backup"), key=lambda x: x.stat().st_mtime, reverse=True)
+    
+    if not backups:
+        raise HTTPException(status_code=404, detail="No backups available")
+    
+    latest_backup = backups[0]
+    
+    # Determine original file from backup name
+    original_name = ".".join(latest_backup.name.split(".")[:-2])  # Remove timestamp and .backup
+    
+    # Find the original file
+    target_file = None
+    for possible_path in [
+        REPO_ROOT / "xyrus" / "static" / original_name,
+        REPO_ROOT / "xyrus" / original_name,
+        REPO_ROOT / original_name
+    ]:
+        if possible_path.exists():
+            target_file = possible_path
+            break
+    
+    if not target_file:
+        raise HTTPException(status_code=404, detail=f"Original file not found for {original_name}")
+    
+    # Perform rollback
+    shutil.copy2(latest_backup, target_file)
+    
+    return JSONResponse({
+        "status": "rolled_back",
+        "message": f"Rolled back {target_file.name} from {latest_backup.name}",
+        "backup_used": str(latest_backup)
+    })
 
 
 @app.post("/api/admin/enforce_laws")

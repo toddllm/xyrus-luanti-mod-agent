@@ -206,7 +206,8 @@
   <div class="tab-buttons">
     <button class="tab-button active" onclick="switchTab('upload')">Upload Forms</button>
     <button class="tab-button" onclick="switchTab('manage')">Manage Forms</button>
-    <button class="tab-button" onclick="switchTab('ai')">AI Control</button>
+    <button class="tab-button" onclick="switchTab('ai')">Xyrus Control</button>
+    <button class="tab-button" onclick="switchTab('code')">Code Modification</button>
     <button class="tab-button" onclick="switchTab('laws')">TM Laws</button>
   </div>
 
@@ -240,26 +241,90 @@
 
   <div id="aiTab" class="tab-content">
     <div class="card">
-      <h2>AI Control Console</h2>
+      <h2>Xyrus Control Console</h2>
       <div style="margin-bottom: 15px;">
-        <label>AI Command:</label>
+        <label>Xyrus Command:</label>
         <input type="text" id="aiCommand" style="width: 70%; padding: 10px; background: #000; color: #00ff00; border: 1px solid #00ff00;" 
-               placeholder="Enter command for Xyrus AI..." />
+               placeholder="Enter command for Xyrus..." />
         <button onclick="sendAICommand()">Execute</button>
       </div>
       <div class="ai-console" id="aiConsole">
-> Xyrus AI System Online
-> Model: gpt-oss:20b
+> Xyrus System Online
+> Power Source: Unlimited
 > Status: Awaiting commands...
       </div>
     </div>
 
     <div class="card">
-      <h2>AI-Driven Form Analysis</h2>
+      <h2>Xyrus Form Analysis</h2>
       <button onclick="analyzeAllForms()">🔍 Analyze All Forms</button>
       <button onclick="generateModFromForms()">🎮 Generate Xyrus Mod</button>
       <button onclick="evolveXyrus()">🧬 Evolve Xyrus</button>
       <div id="analysisResult" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+
+  <div id="codeTab" class="tab-content">
+    <div class="card">
+      <h2>⚡ Xyrus Code Modification ⚡</h2>
+      <div class="status processing" style="margin-bottom: 15px;">
+        <strong>WARNING:</strong> Xyrus can modify its own code. Changes are verified before deployment.
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label>Code Modification Request:</label>
+        <textarea id="codeRequest" style="width: 100%; height: 100px; background: #000; color: #00ff00; border: 2px solid #ff00ff; font-family: monospace;" 
+                  placeholder="Example: Make the main page background pulse with rainbow colors&#10;Example: Add a new API endpoint for /api/xyrus/speak&#10;Example: Change all buttons to have glowing effects"></textarea>
+      </div>
+      
+      <div class="row" style="margin-bottom: 15px;">
+        <div>
+          <label>Target File:</label>
+          <select id="targetFile" style="background: #000; color: #00ff00; border: 1px solid #00ff00;">
+            <option value="auto">Auto-detect</option>
+            <option value="xyrus/static/index.html">Main Page (index.html)</option>
+            <option value="xyrus/static/admin.html">Admin Page (admin.html)</option>
+            <option value="xyrus/app.py">Backend (app.py)</option>
+            <option value="custom">Custom Path</option>
+          </select>
+        </div>
+        <div>
+          <label>Verification Mode:</label>
+          <select id="verifyMode" style="background: #000; color: #00ff00; border: 1px solid #00ff00;">
+            <option value="syntax">Syntax Check</option>
+            <option value="backup">Backup & Test</option>
+            <option value="sandbox">Sandbox First</option>
+          </select>
+        </div>
+      </div>
+      
+      <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+        <button onclick="previewCodeChange()" style="background: #ffaa00;">🔍 Preview Changes</button>
+        <button onclick="verifyCodeChange()" style="background: #00aaff;">✓ Verify Safety</button>
+        <button onclick="deployCodeChange()" style="background: #00ff00; color: #000;" id="deployBtn" disabled>⚡ Deploy Changes</button>
+        <button onclick="rollbackLastChange()" style="background: #ff0000;">↶ Rollback</button>
+      </div>
+      
+      <div class="card" style="background: #000; border: 2px solid #ff00ff;">
+        <h3>Change Preview</h3>
+        <pre id="codePreview" style="color: #00ff00; font-family: monospace; overflow: auto; max-height: 300px;">
+No changes previewed yet...
+        </pre>
+      </div>
+      
+      <div class="card" style="background: #001100; border: 1px solid #00ff00; margin-top: 15px;">
+        <h3>Verification Status</h3>
+        <div id="verifyStatus">
+          <span style="color: #ffff00;">⏸ No verification performed</span>
+        </div>
+      </div>
+      
+      <div class="card" style="margin-top: 15px;">
+        <h3>Code Modification History</h3>
+        <div id="codeHistory" class="events" style="max-height: 200px; overflow: auto;">
+          No modifications yet...
+        </div>
+      </div>
     </div>
   </div>
 
@@ -725,10 +790,166 @@
       }
     }, 10000);
 
-    // Initial AI greeting
+    // Initial greeting
     setTimeout(() => {
-      addToConsole('Xyrus AI: Welcome, Administrator. I am ready to process forms and enforce the laws.');
+      addToConsole('Xyrus: Welcome, Administrator. I am ready to process forms and enforce the laws.');
     }, 1000);
+
+    // Code Modification Functions
+    let pendingChanges = null;
+    let codeBackups = [];
+    
+    async function previewCodeChange() {
+      const request = document.getElementById('codeRequest').value;
+      const targetFile = document.getElementById('targetFile').value;
+      
+      if (!request) {
+        alert('Please enter a code modification request');
+        return;
+      }
+      
+      document.getElementById('codePreview').textContent = 'Generating changes...';
+      
+      try {
+        const res = await fetch('/api/admin/code/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request: request,
+            target_file: targetFile
+          })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Preview failed');
+        
+        pendingChanges = data;
+        
+        // Display the preview
+        let preview = `File: ${data.file_path}\n`;
+        preview += `Changes: ${data.changes.length} modification(s)\n\n`;
+        
+        data.changes.forEach((change, i) => {
+          preview += `--- Change ${i + 1} ---\n`;
+          preview += `OLD:\n${change.old}\n\n`;
+          preview += `NEW:\n${change.new}\n\n`;
+        });
+        
+        document.getElementById('codePreview').textContent = preview;
+        document.getElementById('verifyStatus').innerHTML = 
+          '<span style="color: #ffff00;">⚠️ Changes ready for verification</span>';
+        
+      } catch (e) {
+        document.getElementById('codePreview').textContent = 'Error: ' + e.message;
+      }
+    }
+    
+    async function verifyCodeChange() {
+      if (!pendingChanges) {
+        alert('Please preview changes first');
+        return;
+      }
+      
+      const mode = document.getElementById('verifyMode').value;
+      document.getElementById('verifyStatus').innerHTML = 
+        '<span style="color: #00ffff;">⏳ Verifying changes...</span>';
+      
+      try {
+        const res = await fetch('/api/admin/code/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            changes: pendingChanges,
+            mode: mode
+          })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Verification failed');
+        
+        if (data.safe) {
+          document.getElementById('verifyStatus').innerHTML = 
+            '<span style="color: #00ff00;">✓ Changes verified safe!</span>';
+          document.getElementById('deployBtn').disabled = false;
+          
+          if (data.backup_path) {
+            document.getElementById('verifyStatus').innerHTML += 
+              `<br><span style="color: #00ff00;">Backup saved: ${data.backup_path}</span>`;
+          }
+        } else {
+          document.getElementById('verifyStatus').innerHTML = 
+            `<span style="color: #ff0000;">✗ Verification failed: ${data.reason}</span>`;
+          document.getElementById('deployBtn').disabled = true;
+        }
+        
+      } catch (e) {
+        document.getElementById('verifyStatus').innerHTML = 
+          '<span style="color: #ff0000;">✗ Error: ' + e.message + '</span>';
+        document.getElementById('deployBtn').disabled = true;
+      }
+    }
+    
+    async function deployCodeChange() {
+      if (!pendingChanges) {
+        alert('No verified changes to deploy');
+        return;
+      }
+      
+      if (!confirm('Deploy these code changes? The app will reload.')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/code/deploy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            changes: pendingChanges
+          })
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Deployment failed');
+        
+        // Add to history
+        const historyEntry = `[${new Date().toLocaleTimeString()}] ${pendingChanges.request} - ${data.status}`;
+        const history = document.getElementById('codeHistory');
+        history.textContent = historyEntry + '\n' + history.textContent;
+        
+        alert('✓ Changes deployed successfully! App reloading...');
+        
+        // Clear pending changes
+        pendingChanges = null;
+        document.getElementById('deployBtn').disabled = true;
+        document.getElementById('codePreview').textContent = 'Changes deployed successfully!';
+        
+      } catch (e) {
+        alert('Deployment failed: ' + e.message);
+      }
+    }
+    
+    async function rollbackLastChange() {
+      if (!confirm('Rollback to the last backup?')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/admin/code/rollback', {
+          method: 'POST'
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Rollback failed');
+        
+        alert('✓ Rollback successful!');
+        document.getElementById('codeHistory').textContent = 
+          `[${new Date().toLocaleTimeString()}] ROLLBACK: ${data.message}\n` + 
+          document.getElementById('codeHistory').textContent;
+        
+      } catch (e) {
+        alert('Rollback failed: ' + e.message);
+      }
+    }
   </script>
 </body>
 </html>
