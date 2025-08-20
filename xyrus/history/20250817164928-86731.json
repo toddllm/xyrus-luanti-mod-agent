@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "sara",
+  "model": "fast",
+  "prompt": "A girl AI named Sara. When you punch here she’ll say “Don’t punch, talk by using right click!” Right click to talk. When you right click she’ll say “I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!” She has blonde long hair and a pink dress. ",
+  "summary": "A friendly NPC named Sara who instructs players not to punch and requests help with a food factory. Interact via right click or punch.",
+  "files": {
+    "init.lua": "minetest.register_entity(\"sara:npc\", {\n    initial_properties = {\n        physical = true,\n        collide_with_objects = false,\n        textures = {\"character.png\"},\n        mesh = \"character.b3d\",\n        collisionbox = {-0.35, 0, -0.35, 0.35, 1.5, 0.35},\n        visual = \"mesh\",\n    },\n    static_save = true,\n    on_punch = function(self, hitter)\n        if hitter and hitter:is_player() then\n            minetest.chat_send_player(hitter:get_player_name(),\n                \"Don't punch, talk by using right click!\")\n        end\n    end,\n    on_rightclick = function(self, clicker)\n        if clicker and clicker:is_player() then\n            minetest.chat_send_player(clicker:get_player_name(),\n                \"I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!\")\n        end\n    end,\n})\n\nminetest.register_on_mods_loaded(function()\n    local pos = {x = 0, y = 0, z = 0}\n    if minetest.get_node(pos).name == \"air\" then\n        minetest.add_entity(pos, \"sara:npc\")\n    end\nend)",
+    "mod.conf": "name = sara\noptional_depends = default\ndescription = A friendly NPC named Sara who instructs players not to punch and requests help with a food factory. Interact via right click or punch.\n"
+  },
+  "id": "20250817164928-86731",
+  "timestamp": "2025-08-17T16:49:28"
+}

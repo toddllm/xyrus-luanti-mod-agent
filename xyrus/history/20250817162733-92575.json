@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "daddy2",
+  "model": "fast",
+  "prompt": "quick hello test",
+  "summary": "A minimal mod that says hello.",
+  "files": {
+    "init.lua": "minetest.log('action', '[daddy2] Mod loaded.')\n\nminetest.register_chatcommand('hello', {\n    description = 'Say hello',\n    func = function(name, param)\n        minetest.chat_send_player(name, 'Hello from daddy2!')\n    end,\n})",
+    "mod.conf": "name = daddy2\noptional_depends = default"
+  },
+  "id": "20250817162733-92575",
+  "timestamp": "2025-08-17T16:27:33"
+}

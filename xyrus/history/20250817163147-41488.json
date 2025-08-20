@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "Sara",
+  "model": "fast",
+  "prompt": "A girl AI named Sara. When you punch here she’ll say “Don’t punch, talk by using right click!” Right click to talk. When you right click she’ll say “I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!” She has blonde long hair and a pink dress. ",
+  "summary": "AI girl NPC Sara",
+  "files": {
+    "init.lua": "-- Register the Sara entity\nminetest.register_entity(\"sara:sara\", {\n    initial_properties = {\n        physical = true,\n        collisionbox = {-0.35, -0.5, -0.35, 0.35, 1.8, 0.35},\n        visual = \"mesh\",\n        mesh = \"character.b3d\",\n        textures = {\"default_player.png\"},\n        makes_footstep_sound = true,\n        visual_size = {x = 1, y = 1}\n    },\n    on_activate = function(self, staticdata)\n        self.object:set_properties(self.initial_properties)\n    end,\n    on_punch = function(self, hitter)\n        if hitter and hitter:is_player() then\n            minetest.chat_send_player(hitter:get_player_name(), \"Don't punch, talk by using right click!\")\n        end\n    end,\n    on_rightclick = function(self, clicker)\n        if clicker and clicker:is_player() then\n            minetest.chat_send_player(clicker:get_player_name(), \"I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!\")\n        end\n    end\n})\n\n-- Node to spawn Sara when placed\nminetest.register_node(\"sara:spawn_node\", {\n    description = \"Sara Spawn\",\n    tiles = {\"default_dirt.png\"},\n    groups = {cracky = 3},\n    on_construct = function(pos)\n        local spawn_pos = vector.add(pos, {x = 0, y = 1, z = 0})\n        minetest.add_entity(spawn_pos, \"sara:sara\")\n        minetest.set_node(pos, {name = \"air\"})\n    end\n})",
+    "mod.conf": "name = Sara AI\ndescription = Girl AI named Sara\ndefault_version = 1.0\n"
+  },
+  "id": "20250817163147-41488",
+  "timestamp": "2025-08-17T16:31:47"
+}

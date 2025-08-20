@@ -30,7 +30,9 @@ __pycache__/
 *.pyc
 *.pyo
 .venv/
-lan_modder/.venv/
+xyrus/.venv/
+xyrus/__pycache__/
+xyrus/images/
 
 # Build directories
 build/

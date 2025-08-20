@@ -14,21 +14,21 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 import subprocess
 
-from lan_modder.ollama_client import complete
-from lan_modder.deployer import write_mod, load_mod, unload_mod, restart_server, server_is_active
+from xyrus.ollama_client import complete
+from xyrus.deployer import write_mod, load_mod, unload_mod, restart_server, server_is_active
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-STATIC_DIR = REPO_ROOT / "lan_modder" / "static"
-LOG_FILE = REPO_ROOT / "lan_modder" / "activity.log"
+STATIC_DIR = REPO_ROOT / "xyrus" / "static"
+LOG_FILE = REPO_ROOT / "xyrus" / "activity.log"
 MINETEST_LOG = Path("/var/log/minetest/minetest.log")
 WORLD_MT = Path("/var/games/minetest-server/.minetest/worlds/world/world.mt")
 SERVER_MODS_DIR = Path("/var/games/minetest-server/.minetest/mods")
 REPO_MODS_DIR = REPO_ROOT / "mods"
-HISTORY_DIR = REPO_ROOT / "lan_modder" / "history"
-TRASH_DIR = REPO_ROOT / "lan_modder" / "trash_mods"
-MOD_META_DIR = REPO_ROOT / "lan_modder" / "mod_meta"
+HISTORY_DIR = REPO_ROOT / "xyrus" / "history"
+TRASH_DIR = REPO_ROOT / "xyrus" / "trash_mods"
+MOD_META_DIR = REPO_ROOT / "xyrus" / "mod_meta"
 
-app = FastAPI(title="LAN Modder")
+app = FastAPI(title="Xyrus Mod Agent")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -169,7 +169,7 @@ def append_activity_log(entry: dict[str, Any], deploy_log: str | None = None) ->
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with LOG_LOCK:
             with LOG_FILE.open("a", encoding="utf-8") as f:
-                f.write(f"[{timestamp}] ==== LAN_MODDER EVENT ====\n")
+                f.write(f"[{timestamp}] ==== XYRUS EVENT ====\n")
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 if deploy_log:
                     f.write("---- DEPLOY LOG START ----\n")
@@ -368,7 +368,7 @@ async def logs(offset: int = 0, limit: int = 5000) -> JSONResponse:
         if SERVER_MODS_DIR.exists():
             deployed_mods = sorted([p.name for p in SERVER_MODS_DIR.iterdir() if p.is_dir()])
         return JSONResponse({
-            "lan_modder_log": app_log,
+            "xyrus_log": app_log,
             "minetest_log": server_log,
             "enabled_mods": enabled_mods,
             "deployed_mods": deployed_mods,
@@ -589,6 +589,38 @@ async def api_empty_trash() -> JSONResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/xyrus/upload_images")
+async def upload_xyrus_images(request: Request):
+    """Handle Xyrus character image uploads"""
+    try:
+        form = await request.form()
+        images_dir = REPO_ROOT / "xyrus" / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        
+        saved_files = []
+        for i in range(8):
+            file_key = f"image_{i}"
+            if file_key in form:
+                file = form[file_key]
+                if hasattr(file, 'filename'):
+                    filename = f"xyrus_{i}.png"
+                    filepath = images_dir / filename
+                    content = await file.read()
+                    with filepath.open("wb") as f:
+                        f.write(content)
+                    saved_files.append(filename)
+        
+        event = {"action": "xyrus:images_uploaded", "count": len(saved_files)}
+        recent_events.append(event)
+        if len(recent_events) > MAX_EVENTS:
+            del recent_events[:-MAX_EVENTS]
+        append_activity_log(event)
+        
+        return JSONResponse({"status": "ok", "uploaded": saved_files, "message": "Xyrus images uploaded successfully"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/generate_mod")
 async def generate_mod(req: GenerateRequest):
     use_strong = select_model(req.description, req.model)
@@ -721,4 +753,4 @@ if __name__ == "__main__":
     import uvicorn
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8088"))
-    uvicorn.run("lan_modder.app:app", host=host, port=port, reload=False)
+    uvicorn.run("xyrus.app:app", host=host, port=port, reload=False)

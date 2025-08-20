@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "sara",
+  "model": "fast",
+  "prompt": "A girl AI named Sara. When you punch here she’ll say “Don’t punch, talk by using right click!” Right click to talk. When you right click she’ll say “I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!” She has blonde long hair and a pink dress. ",
+  "summary": "Minimal AI girl Sara entity that reacts to punch and right click, with a placeholder appearance.",
+  "files": {
+    "init.lua": "-- Register a simple spawn egg (optional)\nminetest.register_node(\"sara:spawn_egg\", {\n  description = \"Sara Spawn Egg\",\n  inventory_image = \"default_spawn_egg.png\",\n  on_place = function(itemstack, placer, pointed_thing)\n    local pos = pointed_thing.above\n    if pos then\n      minetest.add_entity(pos, \"sara:sara\")\n      itemstack:take_item()\n      return itemstack\n    end\n  end,\n})\n\n-- Register Sara as an animal mob (requires the mobs mod)\nmobs:register_mob(\"sara:sara\", {\n  type = \"animal\",\n  passive = false,\n  damage = 0,\n  hp_min = 20,\n  hp_max = 20,\n  armor = 200,\n  collisionbox = {-0.4,-1.0,-0.4, 0.4,0.0,0.4},\n  visual = \"mesh\",\n  mesh = \"character.b3d\", -- default player model, placeholder\n  textures = {\"sara.png\"}, -- placeholder texture; replace with a custom PNG\n  makes_footstep_sound = false,\n  sounds = {},\n  walk_velocity = 1.5,\n  run_velocity = 3.0,\n  jump = false,\n  stay_near = {\"default:stone\", 10},\n  drop = {},\n  animation = {\n    stand_start = 0,\n    stand_end = 100,\n    walk_start = 101,\n    walk_end = 140,\n    run_start = 141,\n    run_end = 180,\n    attack_start = 181,\n    attack_end = 200,\n  },\n  on_punch = function(self, puncher)\n    local pname = puncher:get_player_name()\n    minetest.chat_send_player(pname, \"Don't punch, talk by using right click!\")\n  end,\n  on_rightclick = function(self, clicker)\n    local pname = clicker:get_player_name()\n    minetest.chat_send_player(pname, \"I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!\")\n  end,\n})",
+    "mod.conf": "name = sara\nauthor = YourName\ndescription = Minimal Sara AI entity\nversion = 0.1\noptional_depends = mobs"
+  },
+  "id": "20250817164504-51250",
+  "timestamp": "2025-08-17T16:45:04"
+}

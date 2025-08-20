@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "sara",
+  "model": "fast",
+  "prompt": "A girl AI named Sara. When you punch here she’ll say “Don’t punch, talk by using right click!” Right click to talk. When you right click she’ll say “I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!” She has blonde long hair and a pink dress. ",
+  "summary": "A minimal AI NPC named Sara. Punching her says \"Don’t punch, talk by using right click!\" and right‑clicking triggers a conversation about building a Food Factory.",
+  "files": {
+    "init.lua": "-- Sara NPC\n--\n-- Register the entity with a default player model.\nminetest.register_entity(\"sara:sara\", {\n  initial_properties = {\n    physical = true,\n    collisionbox = {-0.35, -1.0, -0.35, 0.35, 0.0, 0.35},\n    visual = \"mesh\",\n    mesh = \"character.obj\",\n    textures = {\"default:character.png\"},\n    makes_footstep_sound = false,\n    walk_velocity = 0,\n    stepheight = 1.5,\n    animation = {\n      stand_start = 0,\n      stand_end = 79,\n      stand_speed = 30,\n      walk_start = 0,\n      walk_end = 79,\n      walk_speed = 30,\n    },\n  },\n  on_rightclick = function(self, clicker)\n    minetest.chat_send_player(\n      clicker:get_player_name(),\n      \"I want you to make a Food Factory please make a furnace and a chest, serve customers, and hire workers!\"\n    )\n  end,\n  on_punch = function(self, puncher)\n    minetest.chat_send_player(\n      puncher:get_player_name(),\n      \"Don’t punch, talk by using right click!\"\n    )\n  end,\n})\n\n-- Spawn Sara at a fixed location when the mod loads.\nminetest.register_on_mods_loaded(function()\n  local pos = {x = 0, y = 20, z = 0}\n  minetest.add_entity(pos, \"sara:sara\")\nend)\n",
+    "mod.conf": "name = sara\nauthor = YourName\ndescription = Minimal Sara AI\ndepends = default\n"
+  },
+  "id": "20250817165821-16482",
+  "timestamp": "2025-08-17T16:58:21"
+}

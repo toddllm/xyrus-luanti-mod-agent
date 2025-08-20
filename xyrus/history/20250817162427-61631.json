@@ -1,0 +1,13 @@
+{
+  "type": "generate",
+  "mod_name": "daddy_test",
+  "model": "fast",
+  "prompt": "quick hello test",
+  "summary": "Quick hello test mod",
+  "files": {
+    "init.lua": "minetest.register_chatcommand(\"hello\", {\n    params = \"\",\n    description = \"Say hello\",\n    func = function(name, param)\n        minetest.chat_send_player(name, \"Hello, world!\")\n        return true\n    end\n})\n",
+    "mod.conf": "name = daddy_test\ndescription = Quick hello test\nauthor = ChatGPT\nlicense = MIT\napi_version = 5\nload = init.lua\noptional_depends = default\n"
+  },
+  "id": "20250817162427-61631",
+  "timestamp": "2025-08-17T16:24:27"
+}

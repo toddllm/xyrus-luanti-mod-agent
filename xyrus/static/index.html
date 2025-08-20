@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LAN Modder</title>
+  <title>Xyrus Mod Agent</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 20px; background: #0b1022; color: #e8eefc; }
     .card { background: #12183a; border: 1px solid #2a3163; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
@@ -16,10 +16,19 @@
   </style>
 </head>
 <body>
-  <h1>LAN Modder</h1>
+  <h1>Xyrus Mod Agent - The All-Powerful Creator</h1>
 
   <div class="card">
-    <h2>Generate a Mod</h2>
+    <h2>Xyrus Image Upload</h2>
+    <label for="xyrusImages">Upload Xyrus Character Images (8 images)</label>
+    <input type="file" id="xyrusImages" multiple accept="image/*" />
+    <div id="imagePreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;"></div>
+    <button id="uploadImages" style="margin-top:10px;">Upload Xyrus Images</button>
+    <span id="uploadStatus"></span>
+  </div>
+
+  <div class="card">
+    <h2>Summon Xyrus - Generate Mod</h2>
     <label for="desc">Describe the mod</label>
     <textarea id="desc" rows="6" placeholder="e.g., add a simple teleport wand command /twand that teleports you 10 nodes forward"></textarea>
     <div style="margin:6px 0 10px; display:flex; gap:8px; flex-wrap:wrap;">
@@ -132,7 +141,7 @@
     </div>
     <div class="row">
       <div>
-        <h4>LAN Modder Log</h4>
+        <h4>Xyrus Log</h4>
         <div id="activityLog" class="events" style="max-height: 260px; overflow:auto">Loading...</div>
       </div>
       <div>
@@ -234,7 +243,7 @@
         status.textContent = 'Loading...';
         const res = await fetch(`/api/logs?limit=${limit}`);
         const data = await res.json();
-        document.getElementById('activityLog').textContent = data.lan_modder_log || '';
+        document.getElementById('activityLog').textContent = data.xyrus_log || '';
         document.getElementById('serverLog').textContent = data.minetest_log || '';
         const enabled = data.enabled_mods || {};
         const deployed = data.deployed_mods || [];
@@ -473,6 +482,60 @@
         if (!res.ok) throw new Error(data.detail || 'Failed');
         alert(`Trash emptied. Removed: ${data.removed}`);
       } catch (e) { alert('Empty trash failed: ' + e.message); }
+    });
+
+    // Xyrus Image Upload Functionality
+    const xyrusImagesInput = document.getElementById('xyrusImages');
+    const imagePreview = document.getElementById('imagePreview');
+    let selectedImages = [];
+
+    xyrusImagesInput.addEventListener('change', (e) => {
+      selectedImages = Array.from(e.target.files);
+      imagePreview.innerHTML = '';
+      selectedImages.forEach((file, index) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = document.createElement('img');
+          img.src = e.target.result;
+          img.style.width = '100px';
+          img.style.height = '100px';
+          img.style.objectFit = 'cover';
+          img.style.borderRadius = '8px';
+          img.title = file.name;
+          imagePreview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    document.getElementById('uploadImages').addEventListener('click', async () => {
+      const uploadStatus = document.getElementById('uploadStatus');
+      if (selectedImages.length !== 8) {
+        uploadStatus.textContent = 'Please select exactly 8 images for Xyrus';
+        return;
+      }
+      
+      uploadStatus.textContent = 'Uploading Xyrus images...';
+      const formData = new FormData();
+      selectedImages.forEach((image, index) => {
+        formData.append(`image_${index}`, image);
+      });
+      
+      try {
+        const res = await fetch('/api/xyrus/upload_images', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Upload failed');
+        uploadStatus.textContent = 'Xyrus images uploaded successfully!';
+        
+        // Auto-populate the mod generation with Xyrus description
+        document.getElementById('desc').value = 'Create Xyrus: The Hero of Every Type, The Creator. A powerful entity with all algorithms and power, more powerful than any code. Implement the 24-step creation process with cell merging, growth phases, containment protocols, and ultimate power. Include transformation abilities, reality override, adaptive strikes, and the ability to defeat even its own creations like Raytridentenent.';
+        document.getElementById('modname').value = 'xyrus';
+      } catch (e) {
+        uploadStatus.textContent = 'Error: ' + e.message;
+      }
     });
   </script>
 </body>

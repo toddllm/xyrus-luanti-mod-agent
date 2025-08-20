@@ -1,5 +1,5 @@
 [Unit]
-Description=LAN Modder web tool (Ollama-based Luanti mod generator)
+Description=Xyrus Mod Agent (All-powerful Luanti mod creator)
 After=network-online.target
 Wants=network-online.target
 
@@ -12,7 +12,7 @@ Environment=PORT=8088
 Environment=OLLAMA_HOST=http://127.0.0.1:11434
 # Optional: set to true to pull models on start (usually keep false)
 Environment=OLLAMA_PULL_ON_START=false
-ExecStart=/home/tdeshane/luanti/tools/start_lan_modder.sh
+ExecStart=/home/tdeshane/luanti/tools/start_xyrus.sh
 Restart=on-failure
 RestartSec=3
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Start the LAN Modder FastAPI app
+# Start the Xyrus FastAPI app
 REPO_ROOT="/home/tdeshane/luanti"
-APP_DIR="$REPO_ROOT/lan_modder"
+APP_DIR="$REPO_ROOT/xyrus"
 VENV_DIR="$APP_DIR/.venv"
 
 if [[ ! -d "$VENV_DIR" ]]; then
@@ -47,9 +47,9 @@ fi
 cd "$REPO_ROOT"
 # Auto-reload on code changes; exclude activity log to avoid reload loops
 python -m uvicorn \
-  lan_modder.app:app \
+  xyrus.app:app \
   --host "$HOST" \
   --port "$PORT" \
   --reload \
-  --reload-dir "lan_modder" \
-  --reload-exclude "lan_modder/activity.log"
+  --reload-dir "xyrus" \
+  --reload-exclude "xyrus/activity.log"
