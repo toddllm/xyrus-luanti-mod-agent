@@ -71,40 +71,20 @@
       transform: translateY(-2px);
     }
     
-    .form-card .quick-action-btn {
-      position: absolute;
-      padding: 3px 5px;
-      font-size: 12px;
-      min-width: auto;
-      margin: 0;
-      border-radius: 5px;
-    }
-    
-    .form-card .quick-action-btn.edit {
-      background: linear-gradient(135deg, #00cc00, #00ff00);
-      color: #000;
-      border-color: #00ff00;
-    }
-    
-    .form-card .quick-action-btn.duplicate {
-      background: linear-gradient(135deg, #cccc00, #ffff00);
-      color: #000;
-      border-color: #ffff00;
-    }
-    
-    .form-card .quick-action-btn.delete {
-      background: linear-gradient(135deg, #660000, #990000);
-      color: #ff6666;
-      border-color: #cc0000;
+    .form-card .form-actions button[onclick*="deleteForm"] {
+      background: linear-gradient(135deg, #660000, #990000) !important;
+      color: #ff9999 !important;
+      border-color: #cc0000 !important;
       opacity: 0.9;
     }
     
-    .form-card .quick-action-btn.delete:hover {
-      background: linear-gradient(135deg, #990000, #cc0000);
-      color: #ffffff;
-      border-color: #ff0000;
+    .form-card .form-actions button[onclick*="deleteForm"]:hover {
+      background: linear-gradient(135deg, #990000, #cc0000) !important;
+      color: #ffffff !important;
+      border-color: #ff0000 !important;
       box-shadow: 0 0 10px rgba(255,0,0,0.5);
       opacity: 1;
+      transform: scale(1.05);
     }
     
     #formEditorModal .card {
@@ -819,12 +799,7 @@ No changes previewed yet...
           // Add hover menu for quick actions
           formDiv.style.position = 'relative';
           formDiv.innerHTML = `
-            <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; z-index: 10;">
-              <button class="quick-action-btn edit" onclick="editForm('${form.name}')" title="Edit Properties" aria-label="Edit">✏️</button>
-              <button class="quick-action-btn duplicate" onclick="duplicateForm('${form.name}')" title="Duplicate" aria-label="Duplicate">📋</button>
-              <button class="quick-action-btn delete" onclick="deleteForm('${form.name}')" title="Delete" aria-label="Delete">🗑️</button>
-            </div>
-            <h4 style="cursor: pointer; margin-top: 30px;" onclick="quickRename('${form.name}', this)" title="Click to rename">${formTitle}</h4>
+            <h4 style="cursor: pointer; margin: 10px 0;" onclick="quickRename('${form.name}', this)" title="Click to rename">${formTitle}</h4>
             ${statusBadge}
             <img src="/api/admin/form_image/${form.name}" 
                  alt="${formTitle}"
@@ -836,14 +811,21 @@ No changes previewed yet...
               <strong style="color: #ff00ff; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Powers:</strong><br>
               ${form.powers ? form.powers.slice(0, 3).join(' • ') : '<em style="opacity: 0.7;">Awaiting analysis...</em>'}
             </div>
-            <div class="form-actions">
+            
+            <div class="form-actions" style="border-top: 1px solid rgba(0,255,255,0.3); margin-top: 10px; padding-top: 10px;">
               ${form.type === 'processed' ? `
-                <button onclick="deployForm('${form.name}')" title="Deploy this form to production" style="background: linear-gradient(135deg, #0099ff, #00ccff); border-color: #00ccff;">⚡ Deploy</button>
-                <button onclick="reanalyzeForm('${form.name}')" title="Re-analyze with Xyrus AI" style="background: linear-gradient(135deg, #ff6600, #ff9933); border-color: #ff9933;">🔄 Analyze</button>
+                <button onclick="deployForm('${form.name}')" title="Deploy this form" style="background: linear-gradient(135deg, #0099ff, #00ccff); border-color: #00ccff;">⚡ Deploy</button>
+                <button onclick="reanalyzeForm('${form.name}')" title="Re-analyze" style="background: linear-gradient(135deg, #ff6600, #ff9933); border-color: #ff9933;">🔄 Analyze</button>
               ` : `
-                <button onclick="processImage('${form.name}')" title="Process image with Xyrus AI" style="background: linear-gradient(135deg, #00cc66, #00ff88); border-color: #00ff88; flex: 1 1 100%;">🤖 Process AI</button>
+                <button onclick="processImage('${form.name}')" title="Process with AI" style="background: linear-gradient(135deg, #00cc66, #00ff88); border-color: #00ff88; flex: 1 1 100%;">🤖 Process</button>
               `}
-              <button onclick="exportForm('${form.name}')" title="Export form data" style="background: linear-gradient(135deg, #9933ff, #cc66ff); border-color: #cc66ff;">💾 Export</button>
+              <button onclick="editForm('${form.name}')" title="Edit Properties" style="background: linear-gradient(135deg, #00cc00, #00ff00); border-color: #00ff00; color: #000;">✏️ Edit</button>
+            </div>
+            
+            <div class="form-actions" style="margin-top: 8px;">
+              <button onclick="duplicateForm('${form.name}')" title="Create Duplicate" style="background: linear-gradient(135deg, #cccc00, #ffff00); border-color: #ffff00; color: #000;">📋 Duplicate</button>
+              <button onclick="exportForm('${form.name}')" title="Export Data" style="background: linear-gradient(135deg, #9933ff, #cc66ff); border-color: #cc66ff;">💾 Export</button>
+              <button onclick="deleteForm('${form.name}')" title="Delete Form" style="background: linear-gradient(135deg, #660000, #990000); border-color: #cc0000; color: #ff9999;">🗑️ Delete</button>
             </div>
           `;
           formGrid.appendChild(formDiv);
