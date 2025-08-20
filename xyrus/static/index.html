@@ -5,8 +5,88 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Xyrus Mod Agent</title>
   <style>
-    body { font-family: system-ui, sans-serif; margin: 20px; background: #0b1022; color: #e8eefc; }
-    .card { background: #12183a; border: 1px solid #2a3163; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    body { 
+      font-family: system-ui, sans-serif; 
+      margin: 20px; 
+      background: linear-gradient(135deg, #0b1022 0%, #1a0033 50%, #0b1022 100%);
+      color: #e8eefc;
+      animation: backgroundShift 30s ease infinite;
+    }
+    @keyframes backgroundShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .xyrus-display {
+      text-align: center;
+      padding: 30px;
+      background: radial-gradient(circle, rgba(255,0,255,0.1) 0%, transparent 70%);
+      border-radius: 20px;
+      margin-bottom: 30px;
+    }
+    .xyrus-avatar {
+      width: 300px;
+      height: 300px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: 5px solid;
+      border-image: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00) 1;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 0 50px rgba(255,0,255,0.5);
+    }
+    .xyrus-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: all 0.5s;
+    }
+    .xyrus-title {
+      font-size: 2.5em;
+      margin: 20px 0;
+      background: linear-gradient(45deg, #ff00ff, #00ffff, #ffff00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: glow 2s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%, 100% { text-shadow: 0 0 20px rgba(255,0,255,0.5); }
+      50% { text-shadow: 0 0 40px rgba(0,255,255,0.8); }
+    }
+    .xyrus-powers {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .power-badge {
+      background: rgba(0,255,255,0.2);
+      border: 1px solid #00ffff;
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+    }
+    .card { 
+      background: rgba(18, 24, 58, 0.9); 
+      border: 1px solid #2a3163; 
+      border-radius: 10px; 
+      padding: 16px; 
+      margin-bottom: 16px;
+      backdrop-filter: blur(10px);
+    }
+    .admin-link {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(45deg, #ff00ff, #00ffff);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 0 20px rgba(255,0,255,0.5);
+    }
     label { display: block; margin: 8px 0 4px; font-weight: 600; }
     textarea, input, select { width: 100%; box-sizing: border-box; background: #0e1430; color: #e8eefc; border: 1px solid #2a3163; border-radius: 8px; padding: 10px; }
     button { background: #3a6ff7; color: white; border: 0; border-radius: 8px; padding: 10px 14px; font-weight: 700; cursor: pointer; }
@@ -16,15 +96,20 @@
   </style>
 </head>
 <body>
-  <h1>Xyrus Mod Agent - The All-Powerful Creator</h1>
-
-  <div class="card">
-    <h2>Xyrus Image Upload</h2>
-    <label for="xyrusImages">Upload Xyrus Character Images (8 images)</label>
-    <input type="file" id="xyrusImages" multiple accept="image/*" />
-    <div id="imagePreview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;"></div>
-    <button id="uploadImages" style="margin-top:10px;">Upload Xyrus Images</button>
-    <span id="uploadStatus"></span>
+  <a href="/admin" class="admin-link">⚙️ Admin Control</a>
+  
+  <div class="xyrus-display">
+    <h1 class="xyrus-title">XYRUS</h1>
+    <div class="xyrus-avatar" id="xyrusAvatar">
+      <img id="xyrusImage" src="/api/admin/form_image/xyrus_0" alt="Xyrus Form" 
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 fill=%22%23ff00ff%22/><text x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2240%22>X</text></svg>'" />
+    </div>
+    <div id="xyrusInfo">
+      <h2 id="currentForm">Loading Form...</h2>
+      <div class="xyrus-powers" id="xyrusPowers">
+        <span class="power-badge">Initializing...</span>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -484,59 +569,129 @@
       } catch (e) { alert('Empty trash failed: ' + e.message); }
     });
 
-    // Xyrus Image Upload Functionality
-    const xyrusImagesInput = document.getElementById('xyrusImages');
-    const imagePreview = document.getElementById('imagePreview');
-    let selectedImages = [];
-
-    xyrusImagesInput.addEventListener('change', (e) => {
-      selectedImages = Array.from(e.target.files);
-      imagePreview.innerHTML = '';
-      selectedImages.forEach((file, index) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          img.style.width = '100px';
-          img.style.height = '100px';
-          img.style.objectFit = 'cover';
-          img.style.borderRadius = '8px';
-          img.title = file.name;
-          imagePreview.appendChild(img);
-        };
-        reader.readAsDataURL(file);
-      });
-    });
-
-    document.getElementById('uploadImages').addEventListener('click', async () => {
-      const uploadStatus = document.getElementById('uploadStatus');
-      if (selectedImages.length !== 8) {
-        uploadStatus.textContent = 'Please select exactly 8 images for Xyrus';
-        return;
-      }
-      
-      uploadStatus.textContent = 'Uploading Xyrus images...';
-      const formData = new FormData();
-      selectedImages.forEach((image, index) => {
-        formData.append(`image_${index}`, image);
-      });
-      
+    // Xyrus Dynamic Display System
+    let xyrusForms = [];
+    let currentFormIndex = 0;
+    let transformationInterval = null;
+    
+    // Load Xyrus forms from admin configuration
+    async function loadXyrusForms() {
       try {
-        const res = await fetch('/api/xyrus/upload_images', {
-          method: 'POST',
-          body: formData
-        });
+        const res = await fetch('/api/admin/list_forms');
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Upload failed');
-        uploadStatus.textContent = 'Xyrus images uploaded successfully!';
         
-        // Auto-populate the mod generation with Xyrus description
-        document.getElementById('desc').value = 'Create Xyrus: The Hero of Every Type, The Creator. A powerful entity with all algorithms and power, more powerful than any code. Implement the 24-step creation process with cell merging, growth phases, containment protocols, and ultimate power. Include transformation abilities, reality override, adaptive strikes, and the ability to defeat even its own creations like Raytridentenent.';
-        document.getElementById('modname').value = 'xyrus';
+        xyrusForms = data.forms.filter(f => f.type === 'processed' || f.name.includes('xyrus'));
+        
+        if (xyrusForms.length === 0) {
+          // No forms processed yet, show default
+          document.getElementById('currentForm').textContent = 'Awaiting Admin Configuration';
+          document.getElementById('xyrusPowers').innerHTML = 
+            '<span class="power-badge">Visit Admin Panel to Upload Forms</span>';
+        } else {
+          // Start the transformation cycle
+          displayCurrentForm();
+          startTransformationCycle();
+        }
       } catch (e) {
-        uploadStatus.textContent = 'Error: ' + e.message;
+        console.error('Error loading forms:', e);
+      }
+    }
+    
+    function displayCurrentForm() {
+      if (xyrusForms.length === 0) return;
+      
+      const form = xyrusForms[currentFormIndex];
+      const img = document.getElementById('xyrusImage');
+      const info = document.getElementById('currentForm');
+      const powers = document.getElementById('xyrusPowers');
+      
+      // Update image with smooth transition
+      img.style.opacity = '0';
+      setTimeout(() => {
+        img.src = `/api/admin/form_image/${form.name}`;
+        img.style.opacity = '1';
+      }, 300);
+      
+      // Update form info
+      info.textContent = form.name ? 
+        `Form ${currentFormIndex + 1}: ${form.name.replace(/_/g, ' ').toUpperCase()}` :
+        `Form ${currentFormIndex + 1}`;
+      
+      // Update powers display
+      if (form.powers && form.powers.length > 0) {
+        powers.innerHTML = form.powers.map(p => 
+          `<span class="power-badge">${p}</span>`
+        ).join('');
+      } else {
+        powers.innerHTML = '<span class="power-badge">Unlimited Power</span>';
+      }
+      
+      // AI-driven description update
+      updateFormDescription(form);
+    }
+    
+    async function updateFormDescription(form) {
+      // Use AI to generate dynamic description based on current form
+      try {
+        const res = await fetch('/api/admin/ai_command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command: `Describe what users see when Xyrus is in form: ${form.name}. Be brief and powerful.`
+          })
+        });
+        
+        const data = await res.json();
+        if (data.response) {
+          // Could update a description element if desired
+          console.log('Xyrus speaks:', data.response);
+        }
+      } catch (e) {
+        // Silent fail, not critical
+      }
+    }
+    
+    function startTransformationCycle() {
+      // Cycle through forms every 10 seconds
+      if (transformationInterval) clearInterval(transformationInterval);
+      
+      transformationInterval = setInterval(() => {
+        currentFormIndex = (currentFormIndex + 1) % xyrusForms.length;
+        displayCurrentForm();
+        
+        // Add transformation effect
+        const avatar = document.getElementById('xyrusAvatar');
+        avatar.style.animation = 'none';
+        setTimeout(() => {
+          avatar.style.animation = 'pulse 1s';
+        }, 10);
+      }, 10000);
+    }
+    
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0% { transform: scale(1); box-shadow: 0 0 50px rgba(255,0,255,0.5); }
+        50% { transform: scale(1.1); box-shadow: 0 0 100px rgba(0,255,255,1); }
+        100% { transform: scale(1); box-shadow: 0 0 50px rgba(255,0,255,0.5); }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    // Manual transformation controls
+    document.getElementById('xyrusAvatar').addEventListener('click', () => {
+      if (xyrusForms.length > 0) {
+        currentFormIndex = (currentFormIndex + 1) % xyrusForms.length;
+        displayCurrentForm();
       }
     });
+    
+    // Load forms on page load
+    loadXyrusForms();
+    
+    // Refresh forms periodically to catch admin updates
+    setInterval(loadXyrusForms, 30000);
   </script>
 </body>
 </html>

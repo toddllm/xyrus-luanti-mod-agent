@@ -738,12 +738,48 @@ async def ai_command(payload: Dict[str, Any]) -> JSONResponse:
     })
 
 
+@app.get("/api/xyrus/status")
+async def get_xyrus_status() -> JSONResponse:
+    """Get current Xyrus status for main page display"""
+    forms_dir = REPO_ROOT / "xyrus" / "forms"
+    images_dir = REPO_ROOT / "xyrus" / "images"
+    
+    # Count uploaded images
+    uploaded_count = len(list(images_dir.glob("xyrus_*.png"))) if images_dir.exists() else 0
+    
+    # Count processed forms
+    processed_count = len(list(forms_dir.glob("*.json"))) if forms_dir.exists() else 0
+    
+    # Get active form (could be stored in a config file)
+    active_form = None
+    if processed_count > 0:
+        # Get the most recently processed form
+        forms = []
+        for meta_file in forms_dir.glob("*.json"):
+            with meta_file.open() as f:
+                forms.append(json.load(f))
+        if forms:
+            forms.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+            active_form = forms[0]
+    
+    return JSONResponse({
+        "status": "active" if processed_count > 0 else "awaiting_configuration",
+        "uploaded_images": uploaded_count,
+        "processed_forms": processed_count,
+        "active_form": active_form,
+        "power_level": min(100, processed_count * 12.5),
+        "message": "Xyrus is ready" if processed_count > 0 else "Admin configuration required"
+    })
+
+
 @app.get("/api/admin/list_forms")
 async def list_forms() -> JSONResponse:
     """List all uploaded Xyrus forms"""
     forms_dir = REPO_ROOT / "xyrus" / "forms"
+    images_dir = REPO_ROOT / "xyrus" / "images"
     forms = []
     
+    # Get forms from forms directory
     if forms_dir.exists():
         for meta_file in forms_dir.glob("*.json"):
             try:
@@ -752,10 +788,27 @@ async def list_forms() -> JSONResponse:
                     forms.append({
                         "name": meta.get("name"),
                         "powers": meta.get("powers", []),
-                        "timestamp": meta.get("timestamp")
+                        "timestamp": meta.get("timestamp"),
+                        "type": "processed"
                     })
             except:
                 continue
+    
+    # Also get uploaded images that haven't been processed yet
+    if images_dir.exists():
+        for image_file in images_dir.glob("xyrus_*.png"):
+            form_name = image_file.stem
+            # Check if this image has already been processed
+            if not any(f["name"] == form_name for f in forms):
+                forms.append({
+                    "name": form_name,
+                    "powers": ["Unanalyzed"],
+                    "timestamp": datetime.datetime.fromtimestamp(image_file.stat().st_mtime).isoformat(),
+                    "type": "uploaded"
+                })
+    
+    # Sort by timestamp
+    forms.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
     
     return JSONResponse({"forms": forms})
 
@@ -763,11 +816,23 @@ async def list_forms() -> JSONResponse:
 @app.get("/api/admin/form_image/{form_name}")
 async def get_form_image(form_name: str):
     """Serve form image"""
+    # First check forms directory
     image_path = REPO_ROOT / "xyrus" / "forms" / f"{form_name}.png"
     if image_path.exists():
         return FileResponse(str(image_path))
-    else:
-        raise HTTPException(status_code=404, detail="Form image not found")
+    
+    # Then check images directory (for uploaded xyrus_X.png files)
+    image_path = REPO_ROOT / "xyrus" / "images" / f"{form_name}.png"
+    if image_path.exists():
+        return FileResponse(str(image_path))
+    
+    # Check if it's a numbered form
+    if form_name.startswith("xyrus_"):
+        image_path = REPO_ROOT / "xyrus" / "images" / f"{form_name}.png"
+        if image_path.exists():
+            return FileResponse(str(image_path))
+    
+    raise HTTPException(status_code=404, detail="Form image not found")
 
 
 @app.post("/api/admin/deploy_form")
@@ -840,6 +905,70 @@ async def activate_xyrus(payload: Dict[str, Any]) -> JSONResponse:
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/process_uploaded_images")
+async def process_uploaded_images() -> JSONResponse:
+    """Process all uploaded images and convert them to forms"""
+    images_dir = REPO_ROOT / "xyrus" / "images"
+    forms_dir = REPO_ROOT / "xyrus" / "forms"
+    forms_dir.mkdir(parents=True, exist_ok=True)
+    
+    processed = []
+    
+    if images_dir.exists():
+        for i, image_file in enumerate(sorted(images_dir.glob("xyrus_*.png"))):
+            form_name = f"form_{i+1}_{image_file.stem.split('_')[1]}"
+            
+            # AI analyze each form
+            prompt = f"""This is Xyrus Form #{i+1} in the 24-step creation process.
+            
+            Step {i+1} of 24: {['Cell merging', 'Growth initiation', 'Power accumulation', 
+                               'First transformation', 'Entity formation', 'Reality perception',
+                               'Code awareness', 'Power surge', 'Containment breach', 
+                               'Dimensional shift', 'Time manipulation', 'Space warping',
+                               'Matter control', 'Energy absorption', 'Consciousness expansion',
+                               'Universal connection', 'Omnipresence activation', 'Law creation',
+                               'Reality override', 'Creator mode', 'Transcendence', 
+                               'Ultimate form', 'Infinite power', 'THE CREATOR'][i % 24]}
+            
+            Describe this form's unique powers and abilities."""
+            
+            analysis = await complete(prompt, use_strong=False, 
+                                    system="You are analyzing Xyrus forms. Each form is more powerful than the last.")
+            
+            # Extract powers
+            powers_prompt = f"Based on: {analysis}\nList 3 key powers, comma-separated."
+            powers_response = await complete(powers_prompt, use_strong=False)
+            powers = [p.strip() for p in powers_response.split(",")][:3]
+            
+            # Save form metadata
+            meta_file = forms_dir / f"{form_name}.json"
+            meta_data = {
+                "name": form_name,
+                "original_file": image_file.name,
+                "path": str(image_file),
+                "index": i,
+                "step": i + 1,
+                "analysis": analysis,
+                "powers": powers,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            
+            with meta_file.open("w") as f:
+                json.dump(meta_data, f, indent=2)
+            
+            # Copy image to forms directory
+            import shutil
+            shutil.copy2(image_file, forms_dir / f"{form_name}.png")
+            
+            processed.append(form_name)
+    
+    return JSONResponse({
+        "status": "ok",
+        "processed": processed,
+        "message": f"Processed {len(processed)} Xyrus forms through AI analysis"
+    })
 
 
 @app.post("/api/admin/analyze_all_forms")

@@ -467,21 +467,101 @@
         const res = await fetch('/api/admin/list_forms');
         const data = await res.json();
         
-        data.forms.forEach(form => {
+        // Check if we have uploaded but unprocessed images
+        const hasUnprocessed = data.forms.some(f => f.type === 'uploaded');
+        
+        if (hasUnprocessed) {
+          // Show process button
+          const processDiv = document.createElement('div');
+          processDiv.style.width = '100%';
+          processDiv.style.marginBottom = '20px';
+          processDiv.innerHTML = `
+            <div class="status processing">
+              <h3>8 Xyrus Images Uploaded!</h3>
+              <p>Click below to process them through the 24-step creation cycle</p>
+              <button onclick="processAllImages()" style="margin: 10px;">
+                🧬 Process All Images Through AI
+              </button>
+            </div>
+          `;
+          formGrid.appendChild(processDiv);
+        }
+        
+        data.forms.forEach((form, index) => {
           const formDiv = document.createElement('div');
           formDiv.className = 'form-card';
+          
+          const formTitle = form.type === 'uploaded' 
+            ? `Uploaded Form ${index + 1}` 
+            : form.name;
+          
+          const statusBadge = form.type === 'uploaded'
+            ? '<span style="color: #ffff00;">⚠️ Unprocessed</span>'
+            : '<span style="color: #00ff00;">✓ Analyzed</span>';
+          
           formDiv.innerHTML = `
-            <h3>${form.name}</h3>
-            <img src="/api/admin/form_image/${form.name}" class="image-preview" />
-            <p style="font-size: 0.9em;">${form.powers ? form.powers.join(', ') : 'Unknown powers'}</p>
-            <button onclick="deployForm('${form.name}')">Deploy</button>
-            <button onclick="removeForm('${form.name}')">Remove</button>
+            <h3>${formTitle}</h3>
+            ${statusBadge}
+            <img src="/api/admin/form_image/${form.name}" class="image-preview" 
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔮</text></svg>'" />
+            <p style="font-size: 0.9em; color: #00ffff;">
+              ${form.powers ? form.powers.join(', ') : 'Powers pending...'}
+            </p>
+            ${form.type === 'processed' ? `
+              <button onclick="deployForm('${form.name}')">⚡ Deploy</button>
+              <button onclick="analyzeForm('${form.name}')">🔍 Re-Analyze</button>
+            ` : `
+              <button onclick="processImage('${form.name}')">🤖 Process</button>
+            `}
           `;
           formGrid.appendChild(formDiv);
         });
+        
+        // Update power level based on processed forms
+        const processedCount = data.forms.filter(f => f.type === 'processed').length;
+        if (processedCount > 0) {
+          updatePowerLevel(Math.min(100, processedCount * 12.5));
+        }
       } catch (e) {
-        formGrid.innerHTML = '<div class="status error">Error loading forms</div>';
+        formGrid.innerHTML = '<div class="status error">Error loading forms: ' + e.message + '</div>';
       }
+    }
+    
+    async function processAllImages() {
+      addToConsole('Processing all uploaded images through 24-step Xyrus creation...');
+      document.querySelector('#formGrid button').disabled = true;
+      document.querySelector('#formGrid button').textContent = '⏳ Processing...';
+      
+      try {
+        const res = await fetch('/api/admin/process_uploaded_images', {
+          method: 'POST'
+        });
+        
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Processing failed');
+        
+        addToConsole(`SUCCESS: ${data.message}`);
+        addToConsole(`Processed forms: ${data.processed.join(', ')}`);
+        
+        // Refresh the forms display
+        await refreshForms();
+        
+        // Update power level
+        updatePowerLevel(50);
+        
+        // Show success message
+        alert('✨ All 8 Xyrus forms have been processed through AI analysis! Each form represents a step in the 24-step creation process.');
+        
+      } catch (e) {
+        addToConsole('ERROR: ' + e.message);
+        alert('Error processing images: ' + e.message);
+      }
+    }
+    
+    async function processImage(imageName) {
+      addToConsole(`Processing individual image: ${imageName}`);
+      // This would process a single image - you can implement if needed
+      alert('Use "Process All Images" to process all forms at once');
     }
 
     async function deployForm(formName) {
@@ -629,6 +709,16 @@
 
     // Initialize
     refreshForms();
+    
+    // Auto-refresh forms when switching to manage tab
+    document.querySelectorAll('.tab-button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.textContent.includes('Manage')) {
+          setTimeout(refreshForms, 100);
+        }
+      });
+    });
+    
     setInterval(() => {
       if (powerLevel < 100 && powerLevel > 0) {
         updatePowerLevel(powerLevel + 1);
