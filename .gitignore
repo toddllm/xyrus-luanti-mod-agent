@@ -11,10 +11,8 @@ env/
 
 # Xyrus specific
 activity.log
-forms/*.png
-forms/*.json
-images/*.png
-images/*.json
+forms/
+images/
 history/
 trash_mods/
 backups/
