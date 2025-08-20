@@ -86,9 +86,18 @@
     }
     
     .form-card .quick-action-btn.delete {
-      background: linear-gradient(135deg, #cc0000, #ff3333);
-      color: #fff;
+      background: linear-gradient(135deg, #660000, #990000);
+      color: #ff6666;
+      border-color: #cc0000;
+      opacity: 0.9;
+    }
+    
+    .form-card .quick-action-btn.delete:hover {
+      background: linear-gradient(135deg, #990000, #cc0000);
+      color: #ffffff;
       border-color: #ff0000;
+      box-shadow: 0 0 10px rgba(255,0,0,0.5);
+      opacity: 1;
     }
     
     #formEditorModal .card {
@@ -1139,9 +1148,56 @@ No changes previewed yet...
     }
     
     async function deleteForm(formName) {
-      if (!confirm(`Are you sure you want to delete form "${formName}"? This action cannot be undone.`)) {
-        return;
-      }
+      // Create custom confirmation dialog
+      const confirmDialog = document.createElement('div');
+      confirmDialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.9);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      `;
+      
+      confirmDialog.innerHTML = `
+        <div style="background: linear-gradient(135deg, #1a0033, #2a1143); border: 2px solid #ff0000; border-radius: 15px; padding: 30px; max-width: 400px; text-align: center; box-shadow: 0 0 30px rgba(255,0,0,0.5);">
+          <h2 style="color: #ff6666; margin-bottom: 20px;">⚠️ Confirm Deletion ⚠️</h2>
+          <p style="color: #ffffff; margin-bottom: 10px;">Are you sure you want to delete:</p>
+          <p style="color: #00ffff; font-size: 18px; font-weight: bold; margin-bottom: 20px;">"${formName}"</p>
+          <p style="color: #ffff00; font-size: 14px; margin-bottom: 30px;">This action cannot be undone!</p>
+          <div style="display: flex; gap: 15px; justify-content: center;">
+            <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                    style="background: linear-gradient(135deg, #006600, #009900); border: 1px solid #00ff00; padding: 12px 30px;">
+              ✅ Cancel
+            </button>
+            <button id="confirmDeleteBtn" 
+                    style="background: linear-gradient(135deg, #990000, #cc0000); border: 1px solid #ff0000; color: #ffffff; padding: 12px 30px;">
+              🗑️ Delete Form
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(confirmDialog);
+      
+      const confirmed = await new Promise((resolve) => {
+        document.getElementById('confirmDeleteBtn').onclick = () => {
+          confirmDialog.remove();
+          resolve(true);
+        };
+        confirmDialog.onclick = (e) => {
+          if (e.target === confirmDialog) {
+            confirmDialog.remove();
+            resolve(false);
+          }
+        };
+      });
+      
+      if (!confirmed) return;
       
       try {
         const res = await fetch('/api/admin/delete_form', {
