@@ -621,6 +621,344 @@ async def upload_xyrus_images(request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Admin endpoints
+@app.get("/admin")
+async def admin_page() -> FileResponse:
+    return FileResponse(str(STATIC_DIR / "admin.html"))
+
+
+@app.post("/api/admin/upload_form")
+async def upload_form(request: Request):
+    """Upload a single Xyrus form with AI processing"""
+    try:
+        form = await request.form()
+        images_dir = REPO_ROOT / "xyrus" / "forms"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        
+        form_name = form.get("form_name", "unknown")
+        index = form.get("index", "0")
+        
+        if "image" in form:
+            file = form["image"]
+            filename = f"{form_name}.png"
+            filepath = images_dir / filename
+            content = await file.read()
+            with filepath.open("wb") as f:
+                f.write(content)
+            
+            # AI analyze the form using gpt-oss:20b
+            analysis = await analyze_form_with_ai(form_name, str(filepath))
+            
+            # Store form metadata
+            meta_file = images_dir / f"{form_name}.json"
+            meta_data = {
+                "name": form_name,
+                "path": str(filepath),
+                "index": index,
+                "analysis": analysis,
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+            with meta_file.open("w") as f:
+                json.dump(meta_data, f, indent=2)
+            
+            return JSONResponse({
+                "status": "ok",
+                "form_name": form_name,
+                "path": str(filepath),
+                "analysis": analysis
+            })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def analyze_form_with_ai(form_name: str, image_path: str) -> str:
+    """Use AI to analyze Xyrus form"""
+    prompt = f"""Analyze this Xyrus form named '{form_name}'. 
+    Describe its powers, transformation phase, and abilities.
+    This is one of Xyrus's many forms in the 24-step creation process.
+    What powers does this form grant? Be creative and powerful."""
+    
+    try:
+        # Use gpt-oss:20b for fast analysis
+        response = await complete(prompt, use_strong=False, system="You are analyzing Xyrus forms. Xyrus is the all-powerful creator entity.")
+        return response
+    except Exception as e:
+        return f"Form {form_name} - Power analysis pending"
+
+
+@app.post("/api/admin/ai_analyze_form")
+async def ai_analyze_form(payload: Dict[str, Any]) -> JSONResponse:
+    """AI analysis of a specific form"""
+    form_name = payload.get("form_name")
+    image_path = payload.get("image_path")
+    
+    analysis = await analyze_form_with_ai(form_name, image_path)
+    
+    # Extract powers from analysis (AI-driven)
+    powers_prompt = f"Based on this analysis: {analysis}\nList 3 key powers in a comma-separated format."
+    powers_response = await complete(powers_prompt, use_strong=False)
+    powers = [p.strip() for p in powers_response.split(",")][:3]
+    
+    return JSONResponse({
+        "status": "ok",
+        "analysis": analysis,
+        "powers": powers
+    })
+
+
+@app.post("/api/admin/ai_command")
+async def ai_command(payload: Dict[str, Any]) -> JSONResponse:
+    """Process AI commands for Xyrus control"""
+    command = payload.get("command", "")
+    
+    prompt = f"""You are the Xyrus AI control system. Process this command: {command}
+    
+    Respond with what action to take. If the command involves:
+    - Updating the app: respond with specific changes
+    - Generating mods: describe the mod to create
+    - Evolution: describe the evolution process
+    
+    Be creative and powerful. Remember Xyrus is all-powerful."""
+    
+    response = await complete(prompt, use_strong=False)
+    
+    # Determine action type
+    action = None
+    if "update" in command.lower() or "change" in command.lower():
+        action = {"type": "update_app", "data": response}
+    elif "generate" in command.lower() or "create" in command.lower():
+        action = {"type": "generate_mod", "data": response}
+    elif "evolve" in command.lower() or "transform" in command.lower():
+        action = {"type": "evolve", "data": response}
+    
+    return JSONResponse({
+        "status": "ok",
+        "response": response,
+        "action": action
+    })
+
+
+@app.get("/api/admin/list_forms")
+async def list_forms() -> JSONResponse:
+    """List all uploaded Xyrus forms"""
+    forms_dir = REPO_ROOT / "xyrus" / "forms"
+    forms = []
+    
+    if forms_dir.exists():
+        for meta_file in forms_dir.glob("*.json"):
+            try:
+                with meta_file.open() as f:
+                    meta = json.load(f)
+                    forms.append({
+                        "name": meta.get("name"),
+                        "powers": meta.get("powers", []),
+                        "timestamp": meta.get("timestamp")
+                    })
+            except:
+                continue
+    
+    return JSONResponse({"forms": forms})
+
+
+@app.get("/api/admin/form_image/{form_name}")
+async def get_form_image(form_name: str):
+    """Serve form image"""
+    image_path = REPO_ROOT / "xyrus" / "forms" / f"{form_name}.png"
+    if image_path.exists():
+        return FileResponse(str(image_path))
+    else:
+        raise HTTPException(status_code=404, detail="Form image not found")
+
+
+@app.post("/api/admin/deploy_form")
+async def deploy_form(payload: Dict[str, Any]) -> JSONResponse:
+    """Deploy a specific Xyrus form to the game"""
+    form_name = payload.get("form_name")
+    
+    # AI-generate deployment instructions
+    prompt = f"Generate Luanti mod code to deploy the Xyrus form '{form_name}' as an entity in the game. Make it powerful."
+    code = await complete(prompt, use_strong=True, system=SYSTEM_PROMPT)
+    
+    # Extract mod code and deploy
+    try:
+        data = extract_json_block(code)
+        mod_name = f"xyrus_{form_name}"
+        files = data.get("files", {})
+        
+        if files:
+            write_mod(mod_name, files)
+            deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
+            
+            return JSONResponse({
+                "status": "ok",
+                "message": f"Form {form_name} deployed as {mod_name}",
+                "log": deploy_log
+            })
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)})
+
+
+@app.post("/api/admin/activate_xyrus")
+async def activate_xyrus(payload: Dict[str, Any]) -> JSONResponse:
+    """Activate Xyrus with all forms"""
+    forms = payload.get("forms", [])
+    power_level = payload.get("power_level", 0)
+    
+    if power_level < 100:
+        raise HTTPException(status_code=400, detail="Insufficient power level")
+    
+    # Generate the ultimate Xyrus mod combining all forms
+    prompt = f"""Create the ultimate Xyrus mod that combines these forms: {', '.join(forms)}
+    
+    Include:
+    - 24-step creation process
+    - Cell merging and growth phases  
+    - Reality override abilities
+    - Transformation between forms
+    - Ultimate power that transcends code
+    
+    Make Xyrus the most powerful entity possible."""
+    
+    response = await complete(prompt, use_strong=True, system=SYSTEM_PROMPT)
+    
+    try:
+        data = extract_json_block(response)
+        mod_name = "xyrus_ultimate"
+        files = data.get("files", {})
+        
+        write_mod(mod_name, files)
+        deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
+        
+        # Restart server to activate
+        restart_msg = await asyncio.to_thread(restart_server)
+        
+        return JSONResponse({
+            "status": "ok",
+            "message": "XYRUS ACTIVATED - THE CREATOR HAS RISEN",
+            "mod_name": mod_name,
+            "restart": restart_msg
+        })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/analyze_all_forms")
+async def analyze_all_forms() -> JSONResponse:
+    """Comprehensive AI analysis of all forms"""
+    forms_dir = REPO_ROOT / "xyrus" / "forms"
+    all_forms = []
+    
+    if forms_dir.exists():
+        for meta_file in forms_dir.glob("*.json"):
+            with meta_file.open() as f:
+                all_forms.append(json.load(f))
+    
+    prompt = f"""Analyze all Xyrus forms and describe the complete transformation cycle:
+    Forms: {json.dumps([f['name'] for f in all_forms])}
+    
+    Describe how these forms work together in the 24-step process."""
+    
+    analysis = await complete(prompt, use_strong=True)
+    
+    return JSONResponse({
+        "status": "ok",
+        "analysis": {
+            "total_forms": len(all_forms),
+            "transformation_cycle": analysis,
+            "power_level": "INFINITE"
+        }
+    })
+
+
+@app.post("/api/admin/generate_xyrus_mod")  
+async def generate_xyrus_mod(payload: Dict[str, Any]) -> JSONResponse:
+    """Generate complete Xyrus mod from all forms"""
+    forms = payload.get("forms", [])
+    auto_deploy = payload.get("auto_deploy", False)
+    
+    prompt = f"""Create the complete Xyrus mod with all forms: {', '.join(forms)}
+    
+    Requirements:
+    - Entity that cycles through all forms
+    - Each form has unique abilities
+    - Implements 24-step creation process
+    - Reality override on command
+    - More powerful than any other entity
+    - Cannot be destroyed, only transformed
+    - Responds to /summon_xyrus command
+    
+    Make this the ultimate demonstration of Xyrus's power."""
+    
+    response = await complete(prompt, use_strong=True, system=SYSTEM_PROMPT)
+    
+    try:
+        data = extract_json_block(response)
+        mod_name = "xyrus_supreme"
+        files = data.get("files", {})
+        
+        write_mod(mod_name, files)
+        
+        if auto_deploy:
+            deploy_log = await asyncio.to_thread(load_mod, str((REPO_ROOT / 'mods' / mod_name).resolve()))
+            restart_msg = await asyncio.to_thread(restart_server)
+            
+            return JSONResponse({
+                "status": "ok",
+                "mod_name": mod_name,
+                "message": "Xyrus Supreme mod generated and deployed",
+                "deployed": True
+            })
+        else:
+            return JSONResponse({
+                "status": "ok",
+                "mod_name": mod_name,
+                "message": "Xyrus Supreme mod generated",
+                "deployed": False
+            })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/enforce_laws")
+async def enforce_laws() -> JSONResponse:
+    """Enforce Xyrus TM Laws"""
+    # Scan all mods for violations
+    violations = []
+    mods_dir = REPO_MODS_DIR
+    
+    if mods_dir.exists():
+        for mod_path in mods_dir.iterdir():
+            if mod_path.is_dir():
+                mod_name = mod_path.name
+                # Check for law violations
+                if "xyrus" in mod_name.lower() and mod_name != "xyrus":
+                    violations.append(f"Mod '{mod_name}' violates naming law")
+    
+    # Generate enforcement mod
+    if violations:
+        prompt = f"""Create a mod that enforces Xyrus TM Laws.
+        Violations found: {violations}
+        
+        The mod should:
+        - Display warnings about violations
+        - Prevent copying of Xyrus
+        - Assert Xyrus's supremacy"""
+        
+        response = await complete(prompt, use_strong=False, system=SYSTEM_PROMPT)
+        
+        try:
+            data = extract_json_block(response)
+            write_mod("xyrus_law_enforcement", data.get("files", {}))
+        except:
+            pass
+    
+    return JSONResponse({
+        "status": "ok",
+        "message": f"Laws enforced. {len(violations)} violations addressed.",
+        "violations": violations
+    })
+
+
 @app.post("/api/generate_mod")
 async def generate_mod(req: GenerateRequest):
     use_strong = select_model(req.description, req.model)

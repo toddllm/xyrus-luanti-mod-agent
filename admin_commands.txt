@@ -1,0 +1,71 @@
+LUANTI/MINETEST ADMIN COMMANDS
+==============================
+
+## Granting Admin Privileges (In-Game)
+
+1. First, join the server as the first player or with the name specified in minetest.conf (currently "admin")
+2. Use these commands in the chat (press T):
+
+### Basic Admin Commands:
+
+/grant <playername> all        - Give all privileges to a player (make them admin)
+/grant <playername> <priv>     - Give specific privilege
+/revoke <playername> <priv>    - Remove specific privilege
+/revoke <playername> all       - Remove all privileges
+
+### Common Privileges:
+
+- interact: Can dig/place/use items
+- shout: Can use chat
+- privs: Can grant privileges to others
+- teleport: Can teleport
+- bring: Can teleport other players
+- fast: Can use fast mode
+- fly: Can fly
+- noclip: Can walk through walls
+- creative: Access to creative inventory
+- give: Can use /give command
+- settime: Can change time
+- server: Can use server commands
+- protection_bypass: Can bypass protection
+- ban: Can ban players
+- kick: Can kick players
+
+### Useful Commands:
+
+/privs                         - See your own privileges
+/privs <playername>           - See another player's privileges
+/status                        - Server status
+/help                          - List available commands
+/help <command>               - Get help for specific command
+
+### Creative/Cheat Commands:
+
+/give <playername> <item> <count>  - Give items (requires 'give' privilege)
+/giveme <item> <count>             - Give yourself items
+/time <0-24000>                    - Set time (6000=dawn, 12000=noon, 18000=dusk)
+/teleport <x> <y> <z>              - Teleport to coordinates
+/teleport <playername>             - Teleport to player
+/spawnentity <entity>              - Spawn an entity
+
+### Server Management:
+
+/kick <playername>             - Kick a player
+/ban <playername>              - Ban a player
+/unban <playername>            - Unban a player
+/clearobjects                  - Clear all objects (items on ground)
+/shutdown                      - Shutdown server
+
+## Setting Up Admin Access:
+
+1. The first player to join an empty server automatically gets all privileges
+2. OR join with the name specified in minetest.conf (currently "admin")
+3. Grant privileges to trusted players: /grant <playername> all
+
+## From Server Console:
+
+If you need to grant privileges from the Linux terminal:
+sudo -u Debian-minetest minetestserver --terminal --world /var/games/minetest-server/.minetest/worlds/world
+
+Then use commands without the '/' prefix:
+grant <playername> all

@@ -1,0 +1,24 @@
+LUANTI/MINETEST SKINS SETUP
+===========================
+
+Simple Skins mod is now installed!
+
+HOW TO USE SKINS:
+1. In-game, open inventory with 'I'
+2. Look for the "Skins" button or tab
+3. Click to browse available skins
+4. OR type /skins in chat
+
+TO ADD CUSTOM SKINS:
+1. Find or create skin images (64x32 pixels PNG format)
+2. Name them: player_[name].png (e.g., player_hero.png)
+3. Copy to: /var/games/minetest-server/.minetest/mods/simple_skins/textures/
+4. Restart server: sudo systemctl restart minetest-server
+
+RECOMMENDED SKIN RESOURCES:
+- MinecraftSkins.com (convert to 64x32)
+- Skindex.com (convert to 64x32)
+- Create your own with any image editor
+
+The simple_skins mod comes with some basic skins by default.
+Players need to reconnect after server restart to see new skins.

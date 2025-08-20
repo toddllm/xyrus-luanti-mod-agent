@@ -1,0 +1,65 @@
+breath = 10
+yaw = 109.6
+pitch = -29.59
+extended_attributes = null
+position = (-872,26.25,492)
+hp = 20
+name = Toby
+version = 1
+PlayerArgsEnd
+List main 32
+Width 0
+Item devkorth:devkorth_tool
+Item devkorth:devkorth_gift
+Empty
+Item devkorth:time_crystal
+Empty
+Empty
+Empty
+Empty
+Item default:flint
+Item default:gravel
+Item default:cobble
+Item default:sand
+Item default:snow
+Item default:dirt
+Item default:snowblock
+Item default:ice
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+EndInventoryList
+List craft 9
+Width 3
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+Empty
+EndInventoryList
+List craftpreview 1
+Width 0
+Empty
+EndInventoryList
+List craftresult 1
+Width 0
+Empty
+EndInventoryList
+EndInventory

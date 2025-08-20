@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example B: Database Load - Luanti Pipeline</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #4CAF50;
+            --accent-hover: #45a049;
+            --border: #444;
+            --code-bg: #0d0d0d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--accent);
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .scenario-info {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .timeline-container {
+            position: relative;
+            margin: 3rem 0;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-step {
+            position: relative;
+            margin-bottom: 3rem;
+            padding-left: 60px;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .timeline-step.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .step-number {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .step-content {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .code-block {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+
+        .code-comment {
+            color: #666;
+        }
+
+        .code-keyword {
+            color: #f92672;
+        }
+
+        .code-function {
+            color: #66d9ef;
+        }
+
+        .code-string {
+            color: #a6e22e;
+        }
+
+        .code-number {
+            color: #ae81ff;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .control-btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .control-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .svg-container {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .performance-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Timeline connector line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--border);
+            z-index: 1;
+        }
+
+        .data-flow {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+
+        .data-item {
+            margin: 0.5rem 0;
+            padding: 0.5rem;
+            background-color: var(--code-bg);
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .highlight {
+            background-color: rgba(76, 175, 80, 0.2);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Overview</a>
+        
+        <h1>Example B: Database Load Scenario</h1>
+        
+        <div class="scenario-info">
+            <h2>Loading from SQLite Storage</h2>
+            <p>
+                When a player moves to a new area or returns after blocks have been unloaded from cache, 
+                Luanti must load the MapBlock from the SQLite database. This involves decompression and 
+                remapping of node IDs.
+            </p>
+            <p style="margin-top: 1rem;">
+                <strong>Starting position:</strong> Player at (-2044, 2029, -2043) in underground mine<br>
+                <strong>Block position:</strong> (-128, 126, -128)<br>
+                <strong>Cache status:</strong> MISS - must load from database
+            </p>
+        </div>
+
+        <div class="svg-container">
+            <svg width="1000" height="300" viewBox="0 0 1000 300">
+                <g id="flow-diagram">
+                    <!-- Player -->
+                    <rect x="10" y="120" width="80" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5"/>
+                    <text x="50" y="150" text-anchor="middle" fill="#fff" font-size="12">Player</text>
+                    
+                    <!-- Arrow 1 -->
+                    <path d="M 90 145 L 130 145" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="0.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Map::getNode -->
+                    <rect x="130" y="120" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="0.8s" fill="freeze"/>
+                    </rect>
+                    <text x="180" y="150" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="0.8s" fill="freeze"/>
+                        Map::getNode
+                    </text>
+                    
+                    <!-- Arrow 2 -->
+                    <path d="M 230 145 L 270 145" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1.1s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Cache -->
+                    <rect x="270" y="120" width="100" height="50" fill="#2a2a2a" stroke="#e74c3c" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1.4s" fill="freeze"/>
+                    </rect>
+                    <text x="320" y="145" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1.4s" fill="freeze"/>
+                        Cache
+                    </text>
+                    <text x="320" y="160" text-anchor="middle" fill="#e74c3c" font-size="11" font-weight="bold" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1.4s" fill="freeze"/>
+                        MISS
+                    </text>
+                    
+                    <!-- Arrow 3 (down to DB) -->
+                    <path d="M 320 170 L 320 210" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="1.7s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- SQLite -->
+                    <rect x="270" y="210" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2s" fill="freeze"/>
+                    </rect>
+                    <text x="320" y="235" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2s" fill="freeze"/>
+                        SQLite DB
+                    </text>
+                    <text x="320" y="250" text-anchor="middle" fill="#ccc" font-size="10" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2s" fill="freeze"/>
+                        621 bytes
+                    </text>
+                    
+                    <!-- Arrow 4 -->
+                    <path d="M 370 235 L 410 235" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2.3s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- ZSTD -->
+                    <rect x="410" y="210" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2.6s" fill="freeze"/>
+                    </rect>
+                    <text x="460" y="235" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2.6s" fill="freeze"/>
+                        ZSTD
+                    </text>
+                    <text x="460" y="250" text-anchor="middle" fill="#ccc" font-size="10" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2.6s" fill="freeze"/>
+                        decompress
+                    </text>
+                    
+                    <!-- Arrow 5 -->
+                    <path d="M 510 235 L 550 235" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="2.9s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Parse -->
+                    <rect x="550" y="210" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.2s" fill="freeze"/>
+                    </rect>
+                    <text x="600" y="235" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.2s" fill="freeze"/>
+                        Parse
+                    </text>
+                    <text x="600" y="250" text-anchor="middle" fill="#ccc" font-size="10" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.2s" fill="freeze"/>
+                        NameIdMap
+                    </text>
+                    
+                    <!-- Arrow 6 (up) -->
+                    <path d="M 600 210 L 600 170" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- MapBlock -->
+                    <rect x="550" y="120" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.8s" fill="freeze"/>
+                    </rect>
+                    <text x="600" y="150" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="3.8s" fill="freeze"/>
+                        MapBlock
+                    </text>
+                    
+                    <!-- Arrow 7 -->
+                    <path d="M 650 145 L 690 145" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="4.1s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- ID Remap -->
+                    <rect x="690" y="120" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="4.4s" fill="freeze"/>
+                    </rect>
+                    <text x="740" y="145" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="4.4s" fill="freeze"/>
+                        ID Remap
+                    </text>
+                    <text x="740" y="160" text-anchor="middle" fill="#ccc" font-size="10" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="4.4s" fill="freeze"/>
+                        Local→Global
+                    </text>
+                    
+                    <!-- Arrow 8 -->
+                    <path d="M 790 145 L 830 145" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="4.7s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Node -->
+                    <rect x="830" y="120" width="100" height="50" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="5s" fill="freeze"/>
+                    </rect>
+                    <text x="880" y="145" text-anchor="middle" fill="#fff" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="5s" fill="freeze"/>
+                        Node Data
+                    </text>
+                    <text x="880" y="160" text-anchor="middle" fill="#ccc" font-size="10" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="5s" fill="freeze"/>
+                        coal ore
+                    </text>
+                    
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50"/>
+                        </marker>
+                    </defs>
+                </g>
+            </svg>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <div class="timeline-step" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3 class="step-title">Cache Miss</h3>
+                    <p class="step-description">
+                        After calculating block position (-128, 126, -128), the cache lookup fails. Time to load from database!
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/map.cpp</span>
+MapBlock *<span class="code-function">Map::getBlockNoCreateNoEx</span>(v3s16 p)
+{
+    MapBlock *block = m_blocks_cache.<span class="code-function">lookup</span>(p);
+    <span class="code-keyword">if</span> (block)
+        <span class="code-keyword">return</span> block;
+    
+    <span class="code-comment">// Cache miss - need to load from database</span>
+    block = <span class="code-function">loadBlock</span>(p);
+    <span class="code-keyword">if</span> (block)
+        m_blocks_cache.<span class="code-function">insert</span>(p, block);  <span class="code-comment">// Add to cache for next time</span>
+    
+    <span class="code-keyword">return</span> block;
+}</div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3 class="step-title">Encode Position for Database</h3>
+                    <p class="step-description">
+                        Convert the 3D block position into a 64-bit integer key for SQLite storage.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/database/database-sqlite3.cpp</span>
+<span class="code-keyword">static</span> s64 <span class="code-function">getBlockAsInteger</span>(<span class="code-keyword">const</span> v3s16 &pos)
+{
+    <span class="code-keyword">return</span> (u64)(pos.Z + <span class="code-number">2048</span>) << <span class="code-number">24</span> |
+           (u64)(pos.Y + <span class="code-number">2048</span>) << <span class="code-number">12</span> |
+           (u64)(pos.X + <span class="code-number">2048</span>);
+}
+
+<span class="code-comment">// For position (-128, 126, -128):</span>
+<span class="code-comment">// key = ((-128 + 2048) << 24) | ((126 + 2048) << 12) | (-128 + 2048)</span>
+<span class="code-comment">// key = (1920 << 24) | (2174 << 12) | 1920</span>
+<span class="code-comment">// key = 32212320915328</span></div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3 class="step-title">SQLite Query</h3>
+                    <p class="step-description">
+                        Execute the database query to retrieve the compressed block data.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// SQL query executed:</span>
+SELECT data FROM blocks WHERE pos = <span class="code-number">32212320915328</span>;
+
+<span class="code-comment">// Returns BLOB: 1D 28 B5 2F FD 00 58 DD 02 00...</span>
+<span class="code-comment">// Size: 621 bytes (ZSTD compressed)</span></div>
+                    <div class="data-flow">
+                        <h4>Database Response:</h4>
+                        <div class="data-item">
+                            <span class="highlight">Version byte:</span> 0x1D (29)
+                        </div>
+                        <div class="data-item">
+                            <span class="highlight">Compressed data:</span> 620 bytes of ZSTD data
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3 class="step-title">ZSTD Decompression</h3>
+                    <p class="step-description">
+                        Decompress the block data from ~600 bytes to ~16KB of raw data.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/serialization.cpp</span>
+<span class="code-keyword">void</span> <span class="code-function">decompressZstd</span>(std::istream &is, std::ostream &os)
+{
+    ZSTD_DStream* stream = <span class="code-function">ZSTD_createDStream</span>();
+    <span class="code-function">ZSTD_initDStream</span>(stream);
+    
+    <span class="code-comment">// Decompress in chunks</span>
+    <span class="code-keyword">while</span> (input_available) {
+        size_t ret = <span class="code-function">ZSTD_decompressStream</span>(stream, &output, &input);
+        os.<span class="code-function">write</span>(output_buffer, output.pos);
+    }
+}
+
+<span class="code-comment">// Result: ~16KB of decompressed block data</span></div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3 class="step-title">Parse NameIdMapping</h3>
+                    <p class="step-description">
+                        Read the block's unique node type mapping. This block uses 7 different node types.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/nameidmapping.cpp</span>
+<span class="code-keyword">void</span> NameIdMapping::<span class="code-function">deSerialize</span>(std::istream &is)
+{
+    u16 count = <span class="code-function">readU16</span>(is);  <span class="code-comment">// count = 7</span>
+    
+    <span class="code-keyword">for</span> (u16 i = <span class="code-number">0</span>; i < count; i++) {
+        u16 id = <span class="code-function">readU16</span>(is);
+        std::string name = <span class="code-function">deSerializeString16</span>(is);
+        m_id_to_name[id] = name;
+        m_name_to_id[name] = id;
+    }
+}</div>
+                    <div class="data-flow">
+                        <h4>This Block's Mapping:</h4>
+                        <div class="data-item">0 → "default:stone"</div>
+                        <div class="data-item">1 → "default:stone_with_iron"</div>
+                        <div class="data-item">2 → "default:stone_with_coal"</div>
+                        <div class="data-item">3 → "default:stone_with_copper"</div>
+                        <div class="data-item">4 → "default:gravel"</div>
+                        <div class="data-item">5 → "default:silver_sand"</div>
+                        <div class="data-item">6 → "default:stone_with_tin"</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="6">
+                <div class="step-number">6</div>
+                <div class="step-content">
+                    <h3 class="step-title">Read Node Array</h3>
+                    <p class="step-description">
+                        Read all 4096 nodes (16×16×16) with their content IDs and parameters.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/mapnode.cpp</span>
+<span class="code-keyword">void</span> MapNode::<span class="code-function">deSerializeBulk</span>(std::istream &is, MapNode *nodes, u32 nodecount)
+{
+    <span class="code-keyword">for</span> (u32 i = <span class="code-number">0</span>; i < <span class="code-number">4096</span>; i++) {
+        nodes[i].param0 = <span class="code-function">readU16</span>(is);  <span class="code-comment">// content_id (local)</span>
+        nodes[i].param1 = <span class="code-function">readU8</span>(is);   <span class="code-comment">// light values</span>
+        nodes[i].param2 = <span class="code-function">readU8</span>(is);   <span class="code-comment">// rotation/param2</span>
+    }
+}
+
+<span class="code-comment">// Total: 4096 nodes × 4 bytes = 16,384 bytes</span></div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="7">
+                <div class="step-number">7</div>
+                <div class="step-content">
+                    <h3 class="step-title">Remap IDs: Local to Global</h3>
+                    <p class="step-description">
+                        Convert block-local IDs to global content IDs using the node definition manager.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/mapblock.cpp</span>
+<span class="code-keyword">static</span> <span class="code-keyword">void</span> <span class="code-function">correctBlockNodeIds</span>(NameIdMapping *nimap, MapNode *nodes, IGameDef *gamedef)
+{
+    <span class="code-keyword">const</span> NodeDefManager *nodedef = gamedef-><span class="code-function">ndef</span>();
+    
+    <span class="code-keyword">for</span> (u32 i = <span class="code-number">0</span>; i < <span class="code-number">4096</span>; i++) {
+        content_t local_id = nodes[i].param0;
+        std::string name;
+        
+        <span class="code-comment">// Get name from block's mapping</span>
+        <span class="code-keyword">if</span> (nimap-><span class="code-function">getName</span>(local_id, name)) {
+            <span class="code-comment">// Get global ID from node registry</span>
+            content_t global_id;
+            nodedef-><span class="code-function">getId</span>(name, global_id);
+            nodes[i].param0 = global_id;
+        }
+    }
+}
+
+<span class="code-comment">// Example: local ID 2 → "default:stone_with_coal" → global ID 97</span></div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="8">
+                <div class="step-number">8</div>
+                <div class="step-content">
+                    <h3 class="step-title">Return Requested Node</h3>
+                    <p class="step-description">
+                        Finally, calculate the array index and return the specific node data.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// Calculate position within block</span>
+v3s16 relpos = world_pos - blockpos * <span class="code-number">16</span>;
+
+<span class="code-comment">// Get node at calculated index</span>
+u32 index = relpos.Z * <span class="code-number">256</span> + relpos.Y * <span class="code-number">16</span> + relpos.X;
+MapNode node = block->data[index];
+
+<span class="code-comment">// node.param0 = 97 (global ID for "default:stone_with_coal")</span>
+<span class="code-comment">// Ready for game to use!</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="performance-stats">
+            <div class="stat-card">
+                <div class="stat-value">5-10ms</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">1</div>
+                <div class="stat-label">Database Query</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">621→16KB</div>
+                <div class="stat-label">Decompression</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4096</div>
+                <div class="stat-label">Nodes Loaded</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" id="prevBtn">Previous</button>
+        <button class="control-btn" id="playBtn">Play</button>
+        <button class="control-btn" id="nextBtn">Next</button>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.timeline-step');
+        const totalSteps = steps.length;
+        let isPlaying = false;
+        let playInterval;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const playBtn = document.getElementById('playBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        function showStep(index) {
+            steps.forEach((step, i) => {
+                if (i <= index) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+            
+            // Auto-scroll to current step after animation starts
+            if (index > 0) {
+                setTimeout(() => {
+                    steps[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800); // Delay to let SVG animation begin
+            }
+            
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === totalSteps - 1;
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                showStep(currentStep);
+            } else if (isPlaying) {
+                stopPlay();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function startPlay() {
+            isPlaying = true;
+            playBtn.textContent = 'Pause';
+            playInterval = setInterval(nextStep, 2500);
+        }
+
+        function stopPlay() {
+            isPlaying = false;
+            playBtn.textContent = 'Play';
+            clearInterval(playInterval);
+        }
+
+        prevBtn.addEventListener('click', () => {
+            stopPlay();
+            prevStep();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            stopPlay();
+            nextStep();
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                stopPlay();
+            } else {
+                if (currentStep === totalSteps - 1) {
+                    currentStep = -1;
+                }
+                startPlay();
+                nextStep();
+            }
+        });
+
+        // Initialize
+        showStep(0);
+
+        // Auto-advance first step after page load
+        setTimeout(() => {
+            if (currentStep === 0) {
+                nextStep();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

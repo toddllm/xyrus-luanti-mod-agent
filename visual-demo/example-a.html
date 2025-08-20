@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Example A: Cache Hit - Luanti Pipeline</title>
+    <style>
+        :root {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #cccccc;
+            --accent: #4CAF50;
+            --accent-hover: #45a049;
+            --border: #444;
+            --code-bg: #0d0d0d;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--accent);
+            text-decoration: none;
+            margin-bottom: 2rem;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--accent-hover);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+        }
+
+        .scenario-info {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .timeline-container {
+            position: relative;
+            margin: 3rem 0;
+        }
+
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline-step {
+            position: relative;
+            margin-bottom: 3rem;
+            padding-left: 60px;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .timeline-step.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .step-number {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 40px;
+            height: 40px;
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            z-index: 2;
+        }
+
+        .step-content {
+            background-color: var(--bg-secondary);
+            padding: 1.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .step-title {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .code-block {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+            margin: 1rem 0;
+        }
+
+        .code-comment {
+            color: #666;
+        }
+
+        .code-keyword {
+            color: #f92672;
+        }
+
+        .code-function {
+            color: #66d9ef;
+        }
+
+        .code-string {
+            color: #a6e22e;
+        }
+
+        .code-number {
+            color: #ae81ff;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 100;
+        }
+
+        .control-btn {
+            padding: 0.75rem 1.5rem;
+            background-color: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .control-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+
+        .svg-container {
+            background-color: var(--bg-secondary);
+            padding: 2rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin: 2rem 0;
+            overflow-x: auto;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .performance-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--code-bg);
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Timeline connector line */
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 19px;
+            top: 40px;
+            bottom: 0;
+            width: 2px;
+            background-color: var(--border);
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Overview</a>
+        
+        <h1>Example A: Cache Hit Scenario</h1>
+        
+        <div class="scenario-info">
+            <h2>The Fastest Path</h2>
+            <p>
+                When a player requests a node that's in a MapBlock already loaded in memory, 
+                Luanti can retrieve it almost instantly. This is the most common case during 
+                normal gameplay, as nearby blocks are kept in the cache.
+            </p>
+            <p style="margin-top: 1rem;">
+                <strong>Starting position:</strong> Player at (1234, 56, -789) looking at a stone node<br>
+                <strong>Block position:</strong> (77, 3, -50)<br>
+                <strong>Cache status:</strong> Block already loaded
+            </p>
+        </div>
+
+        <div class="svg-container">
+            <svg width="800" height="200" viewBox="0 0 800 200">
+                <!-- Flow diagram will be inserted here by JavaScript -->
+                <g id="flow-diagram">
+                    <!-- Player -->
+                    <rect x="10" y="70" width="100" height="60" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5"/>
+                    <text x="60" y="105" text-anchor="middle" fill="#fff" font-size="14">Player</text>
+                    
+                    <!-- Arrow 1 -->
+                    <path d="M 110 100 L 160 100" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="0.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Map::getNode -->
+                    <rect x="160" y="70" width="120" height="60" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze"/>
+                    </rect>
+                    <text x="220" y="95" text-anchor="middle" fill="#fff" font-size="14" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze"/>
+                        Map::getNode
+                    </text>
+                    <text x="220" y="110" text-anchor="middle" fill="#ccc" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1s" fill="freeze"/>
+                        (1234, 56, -789)
+                    </text>
+                    
+                    <!-- Arrow 2 -->
+                    <path d="M 280 100 L 330 100" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="1.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Cache -->
+                    <rect x="330" y="70" width="120" height="60" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/>
+                    </rect>
+                    <text x="390" y="95" text-anchor="middle" fill="#fff" font-size="14" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/>
+                        Block Cache
+                    </text>
+                    <text x="390" y="110" text-anchor="middle" fill="#4CAF50" font-size="12" font-weight="bold" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2s" fill="freeze"/>
+                        HIT!
+                    </text>
+                    
+                    <!-- Arrow 3 -->
+                    <path d="M 450 100 L 500 100" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="2.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- MapBlock -->
+                    <rect x="500" y="70" width="120" height="60" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/>
+                    </rect>
+                    <text x="560" y="95" text-anchor="middle" fill="#fff" font-size="14" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/>
+                        MapBlock
+                    </text>
+                    <text x="560" y="110" text-anchor="middle" fill="#ccc" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3s" fill="freeze"/>
+                        [77, 3, -50]
+                    </text>
+                    
+                    <!-- Arrow 4 -->
+                    <path d="M 620 100 L 670 100" stroke="#4CAF50" stroke-width="2" marker-end="url(#arrowhead)" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="3.5s" fill="freeze"/>
+                    </path>
+                    
+                    <!-- Node -->
+                    <rect x="670" y="70" width="120" height="60" fill="#2a2a2a" stroke="#4CAF50" stroke-width="2" rx="5" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4s" fill="freeze"/>
+                    </rect>
+                    <text x="730" y="95" text-anchor="middle" fill="#fff" font-size="14" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4s" fill="freeze"/>
+                        Node Data
+                    </text>
+                    <text x="730" y="110" text-anchor="middle" fill="#ccc" font-size="12" opacity="0">
+                        <animate attributeName="opacity" from="0" to="1" dur="0.5s" begin="4s" fill="freeze"/>
+                        stone
+                    </text>
+                    
+                    <!-- Arrow marker -->
+                    <defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#4CAF50"/>
+                        </marker>
+                    </defs>
+                </g>
+            </svg>
+        </div>
+
+        <div class="timeline" id="timeline">
+            <div class="timeline-step" data-step="1">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3 class="step-title">Player Requests Node</h3>
+                    <p class="step-description">
+                        The game engine needs to know what node the player is looking at or interacting with.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/client/game.cpp</span>
+<span class="code-keyword">void</span> <span class="code-function">Game::handlePointingAtNode</span>(<span class="code-keyword">const</span> PointedThing &pointed)
+{
+    v3s16 <span class="code-function">nodepos</span> = pointed.node_undersurface;  <span class="code-comment">// (1234, 56, -789)</span>
+    MapNode <span class="code-function">n</span> = map-><span class="code-function">getNode</span>(nodepos);
+}</div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="2">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3 class="step-title">Calculate Block Position</h3>
+                    <p class="step-description">
+                        Convert world coordinates to block coordinates by dividing by 16 (block size).
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/map.cpp</span>
+v3s16 <span class="code-function">getNodeBlockPos</span>(v3s16 p)
+{
+    <span class="code-keyword">return</span> <span class="code-function">v3s16</span>(
+        <span class="code-function">floor</span>(p.X / <span class="code-number">16</span>),  <span class="code-comment">// 1234 / 16 = 77.125 → 77</span>
+        <span class="code-function">floor</span>(p.Y / <span class="code-number">16</span>),  <span class="code-comment">// 56 / 16 = 3.5 → 3</span>
+        <span class="code-function">floor</span>(p.Z / <span class="code-number">16</span>)   <span class="code-comment">// -789 / 16 = -49.3 → -50</span>
+    );
+}</div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="3">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3 class="step-title">Check Block Cache</h3>
+                    <p class="step-description">
+                        Look up the block in the memory cache. In this scenario, it's a hit!
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/map.cpp</span>
+MapBlock *<span class="code-function">Map::getBlockNoCreateNoEx</span>(v3s16 p)
+{
+    <span class="code-comment">// First check cache - FAST!</span>
+    MapBlock *block = m_blocks_cache.<span class="code-function">lookup</span>(p);
+    <span class="code-keyword">if</span> (block)
+        <span class="code-keyword">return</span> block;  <span class="code-comment">// Cache hit! No database access needed</span>
+    
+    <span class="code-comment">// (Database load path not taken in this scenario)</span>
+}</div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="4">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3 class="step-title">Calculate Node Index</h3>
+                    <p class="step-description">
+                        Calculate the position within the 16×16×16 block and convert to array index.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// Calculate relative position within block</span>
+v3s16 relpos = p - blockpos * <span class="code-number">16</span>;
+<span class="code-comment">// relpos = (1234, 56, -789) - (1232, 48, -800) = (2, 8, 11)</span>
+
+<span class="code-comment">// Convert to array index (Z-Y-X order)</span>
+u32 index = relpos.Z * <span class="code-number">256</span> + relpos.Y * <span class="code-number">16</span> + relpos.X;
+<span class="code-comment">// index = 11 * 256 + 8 * 16 + 2 = 2816 + 128 + 2 = 2946</span></div>
+                </div>
+            </div>
+
+            <div class="timeline-step" data-step="5">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h3 class="step-title">Return Node Data</h3>
+                    <p class="step-description">
+                        Access the node directly from the block's array and return to the game engine.
+                    </p>
+                    <div class="code-block">
+<span class="code-comment">// src/mapblock.h</span>
+MapNode <span class="code-function">getNodeNoCheck</span>(s16 x, s16 y, s16 z) {
+    <span class="code-keyword">return</span> data[z * <span class="code-number">256</span> + y * <span class="code-number">16</span> + x];
+}
+
+<span class="code-comment">// Result: MapNode with content_id = 1 (stone in this block's mapping)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="performance-stats">
+            <div class="stat-card">
+                <div class="stat-value">~0.1ms</div>
+                <div class="stat-label">Total Time</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Database Queries</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">5</div>
+                <div class="stat-label">Function Calls</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">O(1)</div>
+                <div class="stat-label">Time Complexity</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" id="prevBtn">Previous</button>
+        <button class="control-btn" id="playBtn">Play</button>
+        <button class="control-btn" id="nextBtn">Next</button>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        const steps = document.querySelectorAll('.timeline-step');
+        const totalSteps = steps.length;
+        let isPlaying = false;
+        let playInterval;
+
+        const prevBtn = document.getElementById('prevBtn');
+        const playBtn = document.getElementById('playBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        function showStep(index) {
+            steps.forEach((step, i) => {
+                if (i <= index) {
+                    step.classList.add('active');
+                } else {
+                    step.classList.remove('active');
+                }
+            });
+            
+            // Auto-scroll to current step after animation starts
+            if (index > 0) {
+                setTimeout(() => {
+                    steps[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 800); // Delay to let SVG animation begin
+            }
+            
+            prevBtn.disabled = index === 0;
+            nextBtn.disabled = index === totalSteps - 1;
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps - 1) {
+                currentStep++;
+                showStep(currentStep);
+            } else if (isPlaying) {
+                stopPlay();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+
+        function startPlay() {
+            isPlaying = true;
+            playBtn.textContent = 'Pause';
+            playInterval = setInterval(nextStep, 2000);
+        }
+
+        function stopPlay() {
+            isPlaying = false;
+            playBtn.textContent = 'Play';
+            clearInterval(playInterval);
+        }
+
+        prevBtn.addEventListener('click', () => {
+            stopPlay();
+            prevStep();
+        });
+
+        nextBtn.addEventListener('click', () => {
+            stopPlay();
+            nextStep();
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (isPlaying) {
+                stopPlay();
+            } else {
+                if (currentStep === totalSteps - 1) {
+                    currentStep = -1;
+                }
+                startPlay();
+                nextStep();
+            }
+        });
+
+        // Initialize
+        showStep(0);
+
+        // Auto-advance first step after page load
+        setTimeout(() => {
+            if (currentStep === 0) {
+                nextStep();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

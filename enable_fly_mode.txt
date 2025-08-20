@@ -1,0 +1,25 @@
+HOW TO ENABLE FLY MODE IN LUANTI/MINETEST
+=========================================
+
+Even with fly privileges, you need to enable fly mode:
+
+1. Press K to toggle fly mode on/off
+   - You'll see "Fly mode enabled" or "Fly mode disabled" message
+
+2. If K doesn't work, try:
+   - Press / to open command console
+   - Type: set fly
+   - Or in chat (T): /set fly
+
+3. Flying controls:
+   - Space: Fly up
+   - Shift: Fly down
+   - Double-tap Space: Toggle between walking and flying
+   - Hold Shift while flying to descend faster
+
+4. Other useful modes:
+   - Press J to toggle fast mode (move faster)
+   - Press H to toggle noclip mode (walk through walls)
+
+Note: Some servers or games may have different key bindings. 
+Check Settings > Change Keys if the default keys don't work.

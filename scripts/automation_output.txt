@@ -1,0 +1,20 @@
+2025-08-08 23:49:20,327 - INFO - Connecting to localhost:50000
+2025-08-08 23:49:20,329 - INFO - UDP endpoint created for localhost:50000
+2025-08-08 23:49:20,329 - INFO - Assigned peer_id: 12
+2025-08-08 23:49:25,315 - INFO - Received HELLO from server
+2025-08-08 23:49:25,345 - INFO - Connected successfully! (auth=False)
+2025-08-08 23:49:25,345 - INFO - Sent CLIENT_READY packet to spawn player
+2025-08-08 23:49:26,346 - INFO - Connection established, sending test commands...
+2025-08-08 23:49:28,349 - INFO - Sent chat: /grant SignTester all
+2025-08-08 23:49:29,350 - INFO - Sent chat: /giveme default:sign_wall_wood
+2025-08-08 23:49:30,320 - INFO - Received HELLO from server
+2025-08-08 23:49:30,351 - INFO - Placing sign at 100, 10, 100
+2025-08-08 23:49:30,351 - INFO - Sent chat: /testsign 100 10 100 Test Sign From Automation
+2025-08-08 23:49:31,352 - INFO - Attempting to interact with sign...
+2025-08-08 23:49:31,352 - INFO - Sent right-click interaction
+2025-08-08 23:49:33,354 - INFO - Sending formspec fields with test text
+2025-08-08 23:49:33,354 - INFO - Sent formspec fields
+2025-08-08 23:49:35,336 - INFO - Received HELLO from server
+2025-08-08 23:49:35,355 - INFO - Test completed! Check devkorth_test.log for signs_fix debug output
+2025-08-08 23:49:38,359 - INFO - Disconnected
+2025-08-08 23:49:38,359 - INFO - UDP connection lost: None

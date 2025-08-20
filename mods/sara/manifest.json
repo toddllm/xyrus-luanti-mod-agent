@@ -1,0 +1,8 @@
+{
+  "name": "sara",
+  "description": "Adds a handful of custom nodes and items to the game.",
+  "version": "1.0.0",
+  "author": "YourName",
+  "license": "MIT",
+  "depends": ["base"]
+}

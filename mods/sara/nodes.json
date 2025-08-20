@@ -1,0 +1,12 @@
+{
+  "sara:example_node": {
+    "description": "Example Node",
+    "tiles": ["default_stone.png"],
+    "groups": {"cracky": 3}
+  },
+  "sara:example_node2": {
+    "description": "Second Example Node",
+    "tiles": ["default_stone.png"],
+    "groups": {"cracky": 3}
+  }
+}

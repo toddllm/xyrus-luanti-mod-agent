@@ -1,0 +1,45 @@
+NULLIFIER ADVENTURE MOD - GAMEPLAY GUIDE
+========================================
+
+The Nullifier Adventure mod is now installed! Here's how to play:
+
+## Starting the Quest:
+1. An admin needs to spawn Dev NPC: `/spawn_dev`
+2. Right-click Dev to start the cake factory quest
+3. Dev will give you starter items:
+   - 5 Chests
+   - 5 Furnaces  
+   - 3 Villager Spawn Eggs
+
+## Quest Objectives:
+1. Build a cake factory with furnaces and chests
+2. Spawn villagers near the factory
+3. Right-click villagers to assign them to work
+4. Protect villagers while they work
+5. After villagers work for a while, return to Dev
+
+## Rewards:
+- Completing the quest gives you a JETPACK!
+- Hold jump while having jetpack to fly
+- Hold sneak to hover
+- Press forward for horizontal boost
+
+## The Nullifier Boss:
+- Spawns after first player gets jetpack
+- MASSIVE boss with 1000 HP
+- Withers nearby blocks
+- Spawns Null minions
+- Players killed by Nullifier become Nulls
+- Death message: "[Player] has been made Null by the Nullifier"
+
+## Tips:
+- Team up to fight the Nullifier
+- Use the jetpack to dodge attacks
+- Craft powerful weapons before the fight
+- Nullifier drops a special core when defeated
+
+## Admin Commands:
+- `/spawn_dev` - Spawn Dev NPC
+- `/grant [player] server` - Give admin privs to spawn NPCs
+
+Have fun saving the world from the Nullifier!
